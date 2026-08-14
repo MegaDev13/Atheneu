@@ -103,7 +103,7 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
                 <p className="text-[11px] text-faint">{activeConv.otherUserOnline ? '🟢 online agora' : '⚪ offline'}</p>
               </div>
             </div>
-            <div className="flex-1 space-y-2 overflow-y-auto p-3 md:p-4">
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 md:p-4">
               {msgs.length === 0 && <p className="py-8 text-center text-[12.5px] text-mute">Diga olá 👋 — o histórico fica salvo.</p>}
               {msgs.map((m) => (
                 <div key={m.id} className={`flex ${m.userId === user?.id ? 'justify-end' : 'justify-start'}`}>
@@ -123,10 +123,11 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
                 aria-label="Mensagem"
                 className="h-11 flex-1 rounded-xl border border-line bg-card2/50 px-3.5 text-[14px] text-ink placeholder:text-faint focus:border-gold focus:outline-none"
               />
-              <button type="submit" disabled={!text.trim()} aria-label="Enviar mensagem"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-wine text-[#f7f0e2] disabled:opacity-40">
-                <Send size={16} />
-              </button>
+                <button type="submit" disabled={!text.trim()} aria-label="Enviar mensagem"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-wine text-[#f7f0e2] disabled:opacity-40">
+                  <Send size={16} />
+                </button>
+              </div>
             </form>
           </>
         ) : (
