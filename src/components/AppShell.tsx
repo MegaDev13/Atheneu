@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Home, LibraryBig, BookOpen, Headphones, Users, Brain, BarChart3, User,
-  Bell, LogOut, Moon, Sun, Timer, Plus, Monitor, Palette, MessagesSquare, Mail,
+  Bell, LogOut, Moon, Sun, Timer, Plus, Monitor, Palette, MessagesSquare, Mail, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -39,6 +39,7 @@ const NAV = [
   { to: '/app/mensagens', icon: Mail, label: 'Mensagens' },
   { to: '/app/conhecimento', icon: Brain, label: 'Conhecimento' },
   { to: '/app/jornada', icon: BarChart3, label: 'Minha jornada' },
+  { to: '/app/retrospectiva', icon: Sparkles, label: 'Retrospectiva' },
   { to: '/app/aparencia', icon: Palette, label: 'Aparência' },
   { to: '/app/perfil', icon: User, label: 'Perfil' },
 ];

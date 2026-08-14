@@ -55,6 +55,7 @@ export interface DemoDB {
   chat: { conversations: any[]; messages: any[]; lastRead?: Record<string, number>; emailQueue?: any[] };
   blocked: string[];
   notifyPrefs: any;
+  recaps: any[];
   mySocial: any;
   discussions: any[];
   dcomments: any[];
@@ -254,6 +255,7 @@ function seedDB(): DemoDB {
     followers: ['p-maria', 'p-joao'],
     blocked: [],
     notifyPrefs: null,
+    recaps: [],
   };
 }
 

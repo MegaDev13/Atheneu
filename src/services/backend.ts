@@ -33,6 +33,7 @@ import type {
   TtsJob,
   TtsPrefs,
   TtsWorker,
+  RecapSnapshot,
 } from '../lib/types';
 
 export interface Backend {
@@ -151,4 +152,9 @@ export interface Backend {
   markConversationRead(userId: string, conversationId: string): Promise<void>;
   getNotifyPrefs(userId: string): Promise<any>;
   setNotifyPrefs(userId: string, prefs: any): Promise<void>;
+
+  // ─── Retrospectiva (Reading Wrapped) ───
+  listRecaps(userId: string): Promise<RecapSnapshot[]>;
+  closeRecap(userId: string, period: string, kind: 'monthly' | 'yearly', metrics: any): Promise<RecapSnapshot>;
+  markRecapViewed(userId: string, id: string): Promise<void>;
 }

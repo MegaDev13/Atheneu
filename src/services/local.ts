@@ -441,6 +441,9 @@ export const localBackend: Backend = {
   markConversationRead: undefined as any,
   getNotifyPrefs: undefined as any,
   setNotifyPrefs: undefined as any,
+  listRecaps: undefined as any,
+  closeRecap: undefined as any,
+  markRecapViewed: undefined as any,
 };
 
 // ─── Helpers da simulação TTS ───────────────────────────────────────────
@@ -796,3 +799,18 @@ const _origSend = (localBackend as any).sendMessage;
   }
   return m;
 };
+
+// ─── Retrospectiva (demo): snapshot idempotente + arquivo ───
+function ensureRecaps(db: any) { if (!db.recaps) db.recaps = []; }
+Object.assign(localBackend, {
+  async listRecaps(userId: string) { const db = loadDB(); ensureRecaps(db); return db.recaps.slice().sort((a: any, b: any) => b.period.localeCompare(a.period)); },
+  async closeRecap(userId: string, period: string, kind: 'monthly' | 'yearly', metrics: any) {
+    const db = loadDB(); ensureRecaps(db);
+    const existing = db.recaps.find((r: any) => r.period === period);
+    if (existing) return existing; // idempotente (§33)
+    const snap = { id: uid(), userId, period, kind, metrics, viewed: false, createdAt: Date.now() };
+    db.recaps.push(snap); saveDB();
+    return snap;
+  },
+  async markRecapViewed(userId: string, id: string) { const db = loadDB(); ensureRecaps(db); const r = db.recaps.find((x: any) => x.id === id); if (r) r.viewed = true; saveDB(); },
+} as any);

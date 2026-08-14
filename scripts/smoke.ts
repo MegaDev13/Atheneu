@@ -291,6 +291,24 @@ async function main() {
   ok('trilha: continuidade mesmo mood = 0', music.moodDistance('calm', 'calm') === 0);
   ok('trilha: transição suave calm→romance = 1', music.moodDistance('calm', 'romance') === 1);
 
+  // ═══ Retrospectiva (Reading Wrapped) ═══
+  const rec = await import('../src/features/recap/metrics');
+  ok('recap: 2024 é bissexto (fev=29)', rec.isLeap(2024) && rec.lastDayOfMonth(2024, 1) === 29);
+  ok('recap: 2023 fev=28', !rec.isLeap(2023) && rec.lastDayOfMonth(2023, 1) === 28);
+  ok('recap: último dia abr=30', rec.lastDayOfMonth(2026, 3) === 30);
+  const r2026 = rec.periodRange('2026');
+  ok('recap: ano não mistura anos', new Date(r2026.start).getFullYear() === 2026 && new Date(r2026.end).getFullYear() === 2027);
+  // favorito só com avaliação; senão mais lido (§7/8/9)
+  const mkS = (bookId: string, min: number, h = 20) => ({ id: 's' + Math.random(), bookId, start: Date.now() - 3600000 * h, end: Date.now() - 3600000 * h + min * 60000, pageStart: 0, pageEnd: 10 });
+  const bNoRate = [{ id: 'b1', title: 'Sem Avaliação', author: 'A', genre: 'Filosofia', status: 'finished', rating: 0, pages: 100, addedAt: 0, lastAccess: 0 } as any];
+  const mNo = rec.computeRecap([mkS('b1', 60)], bNoRate, '2026');
+  ok('recap: sem avaliação não afirma favorito', mNo.favoriteBook === null && mNo.mostReadBook?.title === 'Sem Avaliação');
+  const bRate = [{ ...bNoRate[0], rating: 5, title: 'Cinco Estrelas' }];
+  const mYes = rec.computeRecap([mkS('b1', 60)], bRate, '2026');
+  ok('recap: com avaliação usa favorito', mYes.favoriteBook?.title === 'Cinco Estrelas');
+  // horário favorito oculto com poucas sessões (§13/28)
+  ok('recap: horário oculto com poucas sessões', mNo.favoriteHour === null);
+
   console.log(failures === 0 ? '\n🎉 Todos os testes passaram.' : `\n❌ ${failures} teste(s) falharam.`);
   process.exit(failures === 0 ? 0 : 1);
 }

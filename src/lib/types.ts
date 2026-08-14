@@ -420,6 +420,17 @@ export interface DiscussionComment {
   id: string; discussionId: string; userId: string; userName?: string; userColor?: string;
   parentId: string | null; content: string; createdAt: number;
 }
+
+// ─── Retrospectiva (Reading Wrapped) ───
+export interface RecapSnapshot {
+  id: string;
+  userId: string;
+  period: string;          // 'YYYY-MM' | 'YYYY'
+  kind: 'monthly' | 'yearly';
+  metrics: any;            // RecapMetrics serializado (snapshot — não recalcula)
+  viewed: boolean;
+  createdAt: number;
+}
 // Comentário de trecho/capítulo de livro (social antigo, migration 0002).
 export interface BookComment {
   id: string; personId: string; bookId: string; chapter: number; text: string; likes: number; at: number;

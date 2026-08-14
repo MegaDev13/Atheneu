@@ -815,3 +815,23 @@ const _sbSend = (supabaseBackend as any).sendMessage;
   } catch (e) { console.warn('[notif] falha ao notificar (mensagem já salva):', e); }
   return m;
 };
+
+// ─── Retrospectiva (Supabase): snapshot idempotente (unique user_id,period) ───
+Object.assign(supabaseBackend, {
+  async listRecaps(userId: string) {
+    const { data, error } = await supabase!.from('recaps').select('*').eq('user_id', userId).order('period', { ascending: false });
+    req(data, error);
+    return (data as any[]).map((r) => ({ id: r.id, userId: r.user_id, period: r.period, kind: r.kind, metrics: r.metrics, viewed: r.viewed, createdAt: new Date(r.created_at).getTime() }));
+  },
+  async closeRecap(userId: string, period: string, kind: 'monthly' | 'yearly', metrics: any) {
+    const { data } = await supabase!.from('recaps').select('*').eq('user_id', userId).eq('period', period).maybeSingle();
+    if (data) return { id: data.id, userId, period, kind, metrics: data.metrics, viewed: data.viewed, createdAt: new Date(data.created_at).getTime() };
+    const { data: ins, error } = await supabase!.from('recaps').insert({ user_id: userId, period, kind, metrics }).select().single();
+    req(ins, error);
+    return { id: ins.id, userId, period, kind, metrics, viewed: false, createdAt: Date.now() };
+  },
+  async markRecapViewed(userId: string, id: string) {
+    const { error } = await supabase!.from('recaps').update({ viewed: true }).eq('id', id).eq('user_id', userId);
+    req({}, error);
+  },
+} as any);

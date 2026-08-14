@@ -11,6 +11,7 @@ import { useSession } from '../contexts/SessionContext';
 import { Button, Card, ProgressBar, ProgressRing, Skeleton } from '../components/ui';
 import BookCover from '../components/BookCover';
 import { buildInsight, computeStats, goalStatus } from '../lib/stats';
+import { ensureRecaps, mesLabel } from '../features/recap/engine';
 import { fmt, fmtHours, greeting, relTime } from '../lib/utils';
 import type { Activity, Book, Goal, Note, Progress, ReadingSession, SocialBundle } from '../lib/types';
 
@@ -18,6 +19,13 @@ export default function Dashboard() {
   const { user, profile } = useAuth();
   const { active, start } = useSession();
   const nav = useNavigate();
+  const [recapBanner, setRecapBanner] = useState<any>(null);
+
+  // ao (re)login: fecha períodos vencidos e destaca retrospectiva não vista (§3/4)
+  useEffect(() => {
+    if (!user) return;
+    ensureRecaps(user.id).then((rs) => setRecapBanner(rs.find((r) => !r.viewed) || null)).catch(() => {});
+  }, [user?.id]);
 
   const [loading, setLoading] = useState(true);
   const [books, setBooks] = useState<Book[]>([]);
@@ -108,6 +116,25 @@ export default function Dashboard() {
           </Button>
         )}
       </div>
+
+      {/* ✨ Retrospectiva pronta (não obrigatória) */}
+      {recapBanner && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
+          <Card className="flex flex-wrap items-center justify-between gap-3 border-gold/40 bg-gradient-to-r from-gold/10 to-transparent p-5">
+            <div className="flex items-center gap-3">
+              <Sparkles size={20} className="text-gold" />
+              <div>
+                <p className="font-display text-[17px] text-ink">✨ Sua retrospectiva de {mesLabel(recapBanner.period)} está pronta!</p>
+                <p className="text-[12.5px] text-mute">Veja como foi o seu mês de leitura.</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => { backend.markRecapViewed(user!.id, recapBanner.id).catch(() => {}); nav(`/app/retrospectiva?period=${recapBanner.period}`); }}>Ver agora</Button>
+              <Button size="sm" variant="ghost" onClick={() => { backend.markRecapViewed(user!.id, recapBanner.id).catch(() => {}); setRecapBanner(null); }}>Depois</Button>
+            </div>
+          </Card>
+        </motion.div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Continuar lendo */}
