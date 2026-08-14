@@ -40,6 +40,7 @@ const NAV = [
   { to: '/app/conhecimento', icon: Brain, label: 'Conhecimento' },
   { to: '/app/jornada', icon: BarChart3, label: 'Minha jornada' },
   { to: '/app/aparencia', icon: Palette, label: 'Aparência' },
+  { to: '/app/perfil', icon: User, label: 'Perfil' },
 ];
 
 const MOBILE_NAV = [
