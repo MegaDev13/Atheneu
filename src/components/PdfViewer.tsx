@@ -21,6 +21,7 @@ import { useSession } from '../contexts/SessionContext';
 import { useToast } from '../contexts/ToastContext';
 import { Button, Modal, Skeleton } from './ui';
 import { playPageFlip } from '../lib/sound';
+import { SoundtrackWidget } from '../features/music/soundtrack';
 import { debounce, uid } from '../lib/utils';
 import type { Book, PdfAnnotation, ReaderTool, ViewMode } from '../lib/types';
 import { ANNOTATION_COLORS, autoAnnotationName } from '../lib/types';
@@ -138,6 +139,13 @@ export default function PdfViewer({ book, dark }: { book: Book; dark?: boolean }
 
   const [pageNo, setPageNo] = useState(1);
   const [scalePct, setScalePct] = useState<number>(saved.scale || 100);
+
+  // texto de uma página p/ trilha sonora (look-ahead) — assíncrono via pdfjs
+  const getPageText = useCallback(async (p: number) => {
+    if (!doc) return '';
+    try { const pg = await doc.getPage(p); const tc = await pg.getTextContent(); return (tc.items as any[]).map((i) => i.str).join(' '); }
+    catch { return ''; }
+  }, [doc]);
   const [viewMode, setViewMode] = useState<ViewMode>(saved.viewMode || 'lateral');
   const [tool, setTool] = useState<ReaderTool>(saved.tool || 'nav');
   const [soundOn, setSoundOn] = useState<boolean>(saved.soundOn ?? true);
@@ -740,6 +748,10 @@ export default function PdfViewer({ book, dark }: { book: Book; dark?: boolean }
           );
         })()}
       </Modal>
+      {/* Trilha sonora adaptativa (analisa à frente, não interrompe) */}
+      {doc && (
+        <SoundtrackWidget bookId={book.id} pageNo={pageNo} totalPages={doc.numPages} getPageText={getPageText} />
+      )}
       <div className="hidden"><StickyNote size={1} /><ZoomIn size={1} /></div>
     </div>
   );

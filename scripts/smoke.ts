@@ -282,6 +282,15 @@ async function main() {
   await localBackend.markConversationRead('u1', conv0.id);
   ok('msg: marcar como lida zera contador', (await localBackend.getUnreadCount('u1')) === 0);
 
+  // ═══ Trilha sonora adaptativa ═══
+  const music = await import('../src/features/music/mood');
+  ok('trilha: detecta atmosfera não-calma em tensão', music.detectMood('O coração batia forte, o medo crescia, a tensão tomava o quarto, gritos ao longe!').mood !== 'calm');
+  ok('trilha: detecta contemplação', music.detectMood('respirou fundo, em silêncio, refletindo sobre a vida serena e tranquila').mood === 'calm');
+  const blk = music.analyzeBlock(['o medo e o terror tomavam a noite escura', 'a morte rondava, o horror crescia']);
+  ok('trilha: bloco domina atmosfera sombria/tensa', blk.mood === 'terror' || blk.mood === 'tense');
+  ok('trilha: continuidade mesmo mood = 0', music.moodDistance('calm', 'calm') === 0);
+  ok('trilha: transição suave calm→romance = 1', music.moodDistance('calm', 'romance') === 1);
+
   console.log(failures === 0 ? '\n🎉 Todos os testes passaram.' : `\n❌ ${failures} teste(s) falharam.`);
   process.exit(failures === 0 ? 0 : 1);
 }
