@@ -48,6 +48,12 @@ language sql stable security definer set search_path = public as $$
   );
 $$;
 
+-- Helper: é membro da conversa? (security definer evita recursão de RLS)
+create or replace function is_member_of(conv uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from conversation_members m where m.conversation_id = conv and m.user_id = auth.uid());
+$$;
+
 -- Helper: segue este usuário?
 create or replace function follows_user(other uuid) returns boolean
 language sql stable security definer set search_path = public as $$
@@ -236,10 +242,10 @@ create policy "conversations: membro lê" on conversations for select
             where m.conversation_id = id and m.user_id = auth.uid())
     or kind in ('book','chapter','club')
   );
+drop policy if exists "conversation_members: ler membros" on conversation_members;
 create policy "conversation_members: ler membros" on conversation_members for select
   using (
-    exists (select 1 from conversation_members m2
-            where m2.conversation_id = conversation_id and m2.user_id = auth.uid())
+    is_member_of(conversation_id)
     or exists (select 1 from conversations c
                where c.id = conversation_id and c.kind in ('book','chapter','club'))
   );
@@ -247,18 +253,12 @@ create policy "conversation_members: entrar" on conversation_members for insert
   with check (user_id = auth.uid());
 create policy "conversation_members: sair" on conversation_members for delete
   using (user_id = auth.uid());
+drop policy if exists "messages: membros lêem" on messages;
 create policy "messages: membros lêem" on messages for select
-  using (
-    deleted_at is null and not is_blocked_by(user_id) and
-    exists (select 1 from conversation_members m
-            where m.conversation_id = conversation_id and m.user_id = auth.uid())
-  );
+  using (deleted_at is null and not is_blocked_by(user_id) and is_member_of(conversation_id));
+drop policy if exists "messages: membro escreve" on messages;
 create policy "messages: membro escreve" on messages for insert
-  with check (
-    user_id = auth.uid() and
-    exists (select 1 from conversation_members m
-            where m.conversation_id = conversation_id and m.user_id = auth.uid())
-  );
+  with check (user_id = auth.uid() and is_member_of(conversation_id));
 create policy "messages: apagar a própria" on messages for update
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
