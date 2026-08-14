@@ -68,7 +68,7 @@ export default function App() {
         <AuthProvider>
           <SessionProvider>
             <MotionConfig reducedMotion="user">
-              <BrowserRouter>
+              <BrowserRouter basename={(import.meta.env.VITE_BASE as string | undefined) && (import.meta.env.VITE_BASE as string) !== './' ? (import.meta.env.VITE_BASE as string) : undefined}>
                 <Suspense fallback={<FullScreenLoader />}>
                   <Routes>
                     <Route path="/" element={<Landing />} />

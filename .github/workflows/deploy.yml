@@ -30,6 +30,8 @@ jobs:
 
       - name: Build de produção
         env:
+          # Base do GitHub Pages: /<nome-do-repo>/ — corrige rotas e reload (basename do router)
+          VITE_BASE: /${{ github.event.repository.name }}/
           # Configure estes secrets no repositório (Settings → Secrets and variables → Actions).
           # Sem eles, o site é publicado em modo demonstração.
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}

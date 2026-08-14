@@ -236,12 +236,12 @@ create policy "shared_highlights: apagar o próprio" on shared_highlights for de
   using (user_id = auth.uid());
 
 -- Chat: somente membros da conversa veem mensagens (§81).
+drop policy if exists "conversations: membro lê" on conversations;
 create policy "conversations: membro lê" on conversations for select
-  using (
-    exists (select 1 from conversation_members m
-            where m.conversation_id = id and m.user_id = auth.uid())
-    or kind in ('book','chapter','club')
-  );
+  using (is_member_of(id) or kind in ('book','chapter','club'));
+drop policy if exists "conversations: criar" on conversations;
+create policy "conversations: criar" on conversations
+  for insert with check (auth.uid() is not null);
 drop policy if exists "conversation_members: ler membros" on conversation_members;
 create policy "conversation_members: ler membros" on conversation_members for select
   using (

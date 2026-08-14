@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// base './' permite hospedar em qualquer subdiretório (ex.: usuario.github.io/repositorio/)
+const base = process.env.VITE_BASE || './';
+
 export default defineConfig({
-  base: './',
+  base,
   plugins: [react()],
   server: {
     host: true,
