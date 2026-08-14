@@ -201,3 +201,19 @@ input[type='range'] { accent-color: var(--wine); }
 .textLayer ::selection {
   background: rgba(162, 129, 74, 0.45);
 }
+
+/* ─── Barra de rolagem SEMPRE visível (chat) ─── */
+.chat-scroll {
+  overflow-y: scroll !important;
+  scrollbar-width: auto;            /* Firefox: barra normal */
+  scrollbar-color: var(--gold) var(--card2);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.chat-scroll::-webkit-scrollbar { width: 10px; }
+.chat-scroll::-webkit-scrollbar-track { background: var(--card2); border-radius: 8px; }
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: var(--gold);
+  border-radius: 8px;
+  border: 2px solid var(--card2);
+}

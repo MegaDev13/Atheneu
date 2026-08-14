@@ -64,9 +64,9 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
   const activeConv = convs.find((c) => c.id === active);
 
   return (
-    <div className="card grid h-[560px] overflow-hidden md:grid-cols-[280px_1fr]">
+    <div className="card grid h-[62vh] min-h-[420px] max-h-[680px] grid-rows-[minmax(0,1fr)] overflow-hidden md:grid-cols-[280px_1fr]">
       {/* Lista de conversas (some no mobile quando uma conversa está aberta) */}
-      <div className={`${active ? 'hidden md:block' : 'block'} max-h-full overflow-y-auto border-b border-line p-3 md:border-b-0 md:border-r`}>
+      <div className={`${active ? 'hidden md:block' : 'block'} chat-scroll h-full min-h-0 border-b border-line p-3 md:border-b-0 md:border-r`}>
         <p className="smallcaps mb-2 flex items-center gap-1.5 px-1"><MessageSquare size={12} /> conversas</p>
         {convs.length === 0 && (
           <p className="px-1 py-6 text-center text-[12.5px] text-mute">
@@ -89,8 +89,8 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
         ))}
       </div>
 
-      {/* Thread */}
-      <div className={`${active ? 'flex' : 'hidden md:flex'} max-h-full flex-col`}>
+      {/* Thread — altura travada p/ a caixa de enviar ficar SEMPRE visível */}
+      <div className={`${active ? 'flex' : 'hidden md:flex'} h-full min-h-0 flex-col`}>
         {activeConv ? (
           <>
             <div className="flex items-center gap-2 border-b border-line px-3 py-2.5 md:px-4">
@@ -103,7 +103,7 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
                 <p className="text-[11px] text-faint">{activeConv.otherUserOnline ? '🟢 online agora' : '⚪ offline'}</p>
               </div>
             </div>
-            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 md:p-4">
+            <div className="chat-scroll min-h-0 flex-1 space-y-2 p-3 md:p-4">
               {msgs.length === 0 && <p className="py-8 text-center text-[12.5px] text-mute">Diga olá 👋 — o histórico fica salvo.</p>}
               {msgs.map((m) => (
                 <div key={m.id} className={`flex ${m.userId === user?.id ? 'justify-end' : 'justify-start'}`}>
