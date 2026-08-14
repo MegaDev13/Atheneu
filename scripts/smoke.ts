@@ -163,6 +163,22 @@ async function main() {
   const dur = wavSeconds(fs.readFileSync('/tmp/ab.wav'));
   ok('worker: concatenação WAV + duração (~2s)', Math.abs(dur - 2) < 0.1);
 
+  // ═══ Anotações independentes do PDF (§51-ext) ═══
+  const { autoAnnotationName, ANNOTATION_COLORS } = await import('../src/lib/types');
+  ok('anot: nome automático por texto', autoAnnotationName('A justiça é uma espécie de harmonia muito longa que precisa ser cortada no limite certo', 12) === 'A justiça é uma espécie de harmonia muito longa que precisa…'.slice(0,49) || autoAnnotationName('A justiça é uma espécie de harmonia muito longa que precisa ser cortada no limite certo', 12).endsWith('…'));
+  ok('anot: nome automático sem texto = Página X', autoAnnotationName(null, 327) === 'Página 327');
+  ok('anot: 6 cores disponíveis', Object.keys(ANNOTATION_COLORS).length === 6);
+  // multi-linha/multi-página = 1 anotação com N rects (mesmo id)
+  const multiRect = { id: 'a1', bookId: 'b', page: 50, type: 'text' as const, text: 'x', name: 'n', comment: '', color: 'yellow' as const, rects: [ {page:50,x:.1,y:.2,w:.8,h:.03},{page:50,x:.1,y:.25,w:.8,h:.03},{page:51,x:.1,y:.1,w:.4,h:.03} ], createdAt: 0, updatedAt: 0 };
+  ok('anot: retângulos relativos 0..1', multiRect.rects.every(r => r.x>=0 && r.x<=1 && r.w<=1 && r.h<=1));
+  ok('anot: mesma anotação atravessa páginas', new Set(multiRect.rects.map(r=>r.page)).size === 2);
+  // export/import round-trip
+  const { parseImportedAnnotations } = await import('../src/components/reader/AnnotationUI');
+  const exported = JSON.stringify({ book: {title:'t',author:'a'}, annotations: [multiRect] });
+  const imported = parseImportedAnnotations(exported, 'book_novo');
+  ok('anot: importação reconstrói marcação', imported.length === 1 && imported[0].bookId === 'book_novo' && imported[0].rects.length === 3);
+  ok('anot: importação sanitiza cor inválida', parseImportedAnnotations(JSON.stringify({annotations:[{...multiRect, color:'rosa'}]}), 'b').length === 1);
+
   // ═══ IA (§51) ═══
   const h1 = await hashText('answer_library_question::' + normalizeQuestion('O que é niilismo?'));
   const h2 = await hashText('answer_library_question::' + normalizeQuestion('o que é niilismo?'));

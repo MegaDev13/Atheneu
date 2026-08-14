@@ -407,6 +407,11 @@ export const localBackend: Backend = {
   async aiGlobalToday() {
     return this.aiCountToday('');
   },
+
+  // preenchidos via Object.assign no fim do arquivo (camada de anotações)
+  listAnnotations: undefined as any,
+  saveAnnotation: undefined as any,
+  deleteAnnotation: undefined as any,
 };
 
 // ─── Helpers da simulação TTS ───────────────────────────────────────────
@@ -507,3 +512,31 @@ function ensureSegments(db: any, bookId: string, chapterIdx: number, text: strin
     });
   }
 }
+
+// ─── Anotações independentes do PDF (camada própria) ───
+function annStore(db: any): any[] {
+  if (!Array.isArray(db.annotations)) db.annotations = [];
+  return db.annotations;
+}
+
+Object.assign(localBackend, {
+  async listAnnotations(_userId: string, bookId?: string) {
+    const db = loadDB();
+    const all = annStore(db) as any[];
+    return (bookId ? all.filter((a) => a.bookId === bookId) : all)
+      .slice()
+      .sort((a, b) => a.page - b.page || (a.rects[0]?.y || 0) - (b.rects[0]?.y || 0));
+  },
+  async saveAnnotation(_userId: string, a: any) {
+    const db = loadDB();
+    const list = annStore(db);
+    const i = list.findIndex((x: any) => x.id === a.id);
+    if (i >= 0) list[i] = a; else list.push(a);
+    saveDB();
+  },
+  async deleteAnnotation(_userId: string, id: string) {
+    const db = loadDB();
+    db.annotations = annStore(db).filter((x: any) => x.id !== id);
+    saveDB();
+  },
+} as any);

@@ -17,6 +17,7 @@ import type {
   Highlight,
   Note,
   Notification,
+  PdfAnnotation,
   Profile,
   Progress,
   ReadingSession,
@@ -101,4 +102,9 @@ export interface Backend {
   aiLogRequest(userId: string, entry: AiRequestEntry): Promise<void>;
   aiCountToday(userId: string): Promise<number>;
   aiGlobalToday(): Promise<number>;
+
+  // ─── Anotações independentes do PDF ───
+  listAnnotations(userId: string, bookId?: string): Promise<PdfAnnotation[]>;
+  saveAnnotation(userId: string, a: PdfAnnotation): Promise<void>;
+  deleteAnnotation(userId: string, id: string): Promise<void>;
 }

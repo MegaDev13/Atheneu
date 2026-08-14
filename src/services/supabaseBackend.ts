@@ -470,3 +470,31 @@ Object.assign(supabaseBackendImpl, {
 });
 
 export const supabaseBackend = supabaseBackendImpl as Backend;
+
+// ─── Anotações independentes do PDF (migration 0005) ───
+const mapAnnRow = (r: any): import('../lib/types').PdfAnnotation => ({
+  id: r.id, bookId: r.book_id, page: r.page, type: r.type, text: r.text,
+  name: r.name, comment: r.comment, color: r.color, rects: r.rects || [],
+  createdAt: new Date(r.created_at).getTime(), updatedAt: new Date(r.updated_at).getTime(),
+});
+
+Object.assign(supabaseBackend, {
+  async listAnnotations(userId: string, bookId?: string) {
+    let q = supabase!.from('pdf_annotations').select('*').eq('user_id', userId).order('page');
+    if (bookId) q = q.eq('book_id', bookId);
+    const { data, error } = await q;
+    return req(data, error).map(mapAnnRow);
+  },
+  async saveAnnotation(userId: string, a: import('../lib/types').PdfAnnotation) {
+    const { error } = await supabase!.from('pdf_annotations').upsert({
+      id: a.id, user_id: userId, book_id: a.bookId, page: a.page, type: a.type,
+      text: a.text, name: a.name, comment: a.comment, color: a.color, rects: a.rects,
+      updated_at: new Date(a.updatedAt).toISOString(),
+    });
+    req({}, error);
+  },
+  async deleteAnnotation(userId: string, id: string) {
+    const { error } = await supabase!.from('pdf_annotations').delete().eq('id', id).eq('user_id', userId);
+    req({}, error);
+  },
+} as any);

@@ -25,6 +25,9 @@ tecnologia moderna**.
 | Upload de livros **EPUB, PDF, TXT e DOCX** com extração automática de título/autor/capítulos | ✅ |
 | Leitor próprio (fontes, espaçamento, temas claro/sépia/escuro, índice, busca, tela cheia) | ✅ |
 | Seleção de texto → **destaques em 4 cores, notas, copiar, perguntar à IA** | ✅ |
+| **Anotações independentes do PDF** (marca-texto + marcação visual p/ escaneados, 6 cores, nomes, comentários, exportar/importar TXT/JSON/PDF) | ✅ |
+| **3 modos de leitura**: lateral · virar página (page-flip com som sintetizado) · vertical virtualizado | ✅ |
+| `last_read_page` independente do cronômetro, restauração de página/zoom/modo, multi-dispositivo | ✅ |
 | Progresso persistido (capítulo + posição + página) | ✅ |
 | Notas com tags, busca e marcação para revisão | ✅ |
 | Sessões de leitura com resumo (tempo, páginas, ritmo) | ✅ |

@@ -51,6 +51,7 @@ export interface DemoDB {
   ttsPrefs: { engine: string; voice: string; speed: number; language: string; quality: 'low' | 'medium' | 'high' };
   aiCache: { hash: string; operation: string; response: string; model: string; createdAt: number; expiresAt: number }[];
   aiLog: { operation: string; hash: string | null; model: string; status: string; tokensEstimated: number; at: number }[];
+  annotations: any[];
 }
 
 export interface DemoWorker {
@@ -219,6 +220,7 @@ function seedDB(): DemoDB {
     ttsPrefs: { engine: 'kokoro', voice: 'pf_dora', speed: 1, language: 'pt-BR', quality: 'high' },
     aiCache: [],
     aiLog: [],
+    annotations: [],
   };
 }
 

@@ -295,6 +295,56 @@ export interface AiUsage {
   globalToday: number;
 }
 
+// ─── Anotações independentes do PDF (camada própria) ─────────────────────
+// O PDF original NUNCA é modificado: as marcações vivem no banco e são
+// renderizadas dinamicamente sobre a página (coordenadas relativas 0..1,
+// independentes de zoom/resolução/dispositivo).
+export type AnnotationColor = 'yellow' | 'green' | 'blue' | 'red' | 'orange' | 'purple';
+
+export const ANNOTATION_COLORS: Record<AnnotationColor, string> = {
+  yellow: 'rgba(240,190,60,.45)',
+  green: 'rgba(74,170,110,.42)',
+  blue: 'rgba(80,140,210,.40)',
+  red: 'rgba(215,80,75,.38)',
+  orange: 'rgba(240,140,50,.42)',
+  purple: 'rgba(150,90,200,.40)',
+};
+
+// Retângulo em coordenadas RELATIVAS à página (0..1)
+export interface AnnoRect {
+  page: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface PdfAnnotation {
+  id: string;
+  bookId: string;
+  page: number; // primeira página da marcação
+  type: 'text' | 'visual'; // texto selecionável vs. marcação visual (PDF escaneado)
+  text: string | null; // texto selecionado (modo A)
+  name: string; // opcional p/ usuário; senão auto (início do texto ou "Página X")
+  comment: string;
+  color: AnnotationColor;
+  rects: AnnoRect[]; // múltiplas linhas/páginas → mesma anotação
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Nome automático (§7): início do texto + "…" ou "Página X"
+export function autoAnnotationName(text: string | null, page: number, max = 48): string {
+  if (text && text.trim()) {
+    const t = text.trim().replace(/\s+/g, ' ');
+    return t.length > max ? t.slice(0, max).trimEnd() + '…' : t;
+  }
+  return `Página ${page}`;
+}
+
+export type ViewMode = 'lateral' | 'flip' | 'vertical';
+export type ReaderTool = 'nav' | 'mark';
+
 export interface SocialBundle {
   people: Person[];
   following: string[];

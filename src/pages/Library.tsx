@@ -30,6 +30,7 @@ export default function Library() {
 
   const [books, setBooks] = useState<Book[]>([]);
   const [progress, setProgress] = useState<Progress[]>([]);
+  const [annCounts, setAnnCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('grid');
   const [filter, setFilter] = useState<'all' | BookStatus>('all');
@@ -44,6 +45,11 @@ export default function Library() {
     try {
       const [b, p] = await Promise.all([backend.listBooks(user.id), backend.listProgress(user.id)]);
       setBooks(b); setProgress(p);
+      backend.listAnnotations(user.id).then((as) => {
+        const m: Record<string, number> = {};
+        as.forEach((a) => { m[a.bookId] = (m[a.bookId] || 0) + 1; });
+        setAnnCounts(m);
+      }).catch(() => {});
       backend.getSocial(user.id).then(setSocial).catch(() => {});
     } catch (e) {
       console.error(e);
@@ -142,7 +148,11 @@ export default function Library() {
       ) : view === 'list' ? (
         <ListView books={filtered} pctOf={pctOf} onOpen={setDetail} />
       ) : (
-        <GridView books={filtered} pctOf={pctOf} onOpen={setDetail} />
+        <GridView
+          books={filtered} pctOf={pctOf} onOpen={setDetail}
+          annCounts={annCounts} progress={progress}
+          onContinue={(b) => nav(`/app/ler/${b.id}`)}
+        />
       )}
 
       <AddBookModal open={addOpen} onClose={() => setAddOpen(false)} onSaved={(b) => { setAddOpen(false); load(); setDetail(b); }} />
@@ -182,29 +192,47 @@ function EmptyShelf({ hasBooks, onAdd, query }: { hasBooks: boolean; onAdd: () =
   );
 }
 
-function GridView({ books, pctOf, onOpen }: { books: Book[]; pctOf: (b: Book) => number; onOpen: (b: Book) => void }) {
+function GridView({ books, pctOf, onOpen, annCounts, progress, onContinue }: {
+  books: Book[]; pctOf: (b: Book) => number; onOpen: (b: Book) => void;
+  annCounts: Record<string, number>; progress: Progress[]; onContinue: (b: Book) => void;
+}) {
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-      {books.map((b, i) => (
-        <motion.button
-          key={b.id}
-          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: Math.min(i * 0.04, 0.4), duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          onClick={() => onOpen(b)}
-          className="group text-left"
-          aria-label={`${b.title}, ${b.author}`}
-        >
-          <div className="relative transition-transform duration-300 ease-out group-hover:-translate-y-2 group-hover:rotate-[-1deg]">
-            <BookCover title={b.title} author={b.author} cover={b.cover} className="aspect-[2/3] w-full shadow-card group-hover:shadow-deep" />
-            <div className="absolute inset-x-0 bottom-0 h-1 rounded-b-md bg-black/20">
-              <div className="h-full rounded-l-sm bg-gold" style={{ width: `${pctOf(b) * 100}%` }} />
-            </div>
-          </div>
-          <p className="mt-3 truncate font-display text-[15px] leading-tight text-ink">{b.title}</p>
-          <p className="truncate text-[12.5px] text-faint">{b.author}</p>
-          <p className="mt-0.5 text-[11px] uppercase tracking-wider text-mute">{STATUS_LABEL[b.status]}</p>
-        </motion.button>
-      ))}
+      {books.map((b, i) => {
+        const pr = progress.find((x) => x.bookId === b.id);
+        const nAnn = annCounts[b.id] || 0;
+        return (
+          <motion.div
+            key={b.id}
+            initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: Math.min(i * 0.04, 0.4), duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="group text-left"
+          >
+            <button onClick={() => onOpen(b)} className="block w-full text-left" aria-label={`${b.title}, ${b.author}`}>
+              <div className="relative transition-transform duration-300 ease-out group-hover:-translate-y-2 group-hover:rotate-[-1deg]">
+                <BookCover title={b.title} author={b.author} cover={b.cover} className="aspect-[2/3] w-full shadow-card group-hover:shadow-deep" />
+                <div className="absolute inset-x-0 bottom-0 h-1 rounded-b-md bg-black/20">
+                  <div className="h-full rounded-l-sm bg-gold" style={{ width: `${pctOf(b) * 100}%` }} />
+                </div>
+              </div>
+              <p className="mt-3 truncate font-display text-[15px] leading-tight text-ink">{b.title}</p>
+              <p className="truncate text-[12.5px] text-faint">{b.author}</p>
+              <p className="mt-0.5 text-[11px] tabular-nums text-mute">
+                {pr ? `pág. ${pr.page} / ${b.pages || '—'} · ${Math.round(pctOf(b) * 100)}%` : STATUS_LABEL[b.status]}
+                {nAnn > 0 && <span className="ml-1.5 rounded-full bg-wine-light px-1.5 py-0.5 text-[10px] text-wine">🖍 {nAnn}</span>}
+              </p>
+            </button>
+            {(b.status === 'reading' || pr) && (
+              <button
+                onClick={() => onContinue(b)}
+                className="mt-1.5 text-[12px] font-semibold text-wine opacity-80 hover:underline group-hover:opacity-100"
+              >
+                CONTINUAR LEITURA →
+              </button>
+            )}
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
