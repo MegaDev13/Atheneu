@@ -419,6 +419,19 @@ export const localBackend: Backend = {
   listMessages: undefined as any,
   sendMessage: undefined as any,
   onChatMessage: undefined as any,
+  getPublicProfile: undefined as any,
+  updateSocial: undefined as any,
+  getFollowers: undefined as any,
+  getFollowing: undefined as any,
+  searchUsers: undefined as any,
+  listDiscussions: undefined as any,
+  getDiscussion: undefined as any,
+  createDiscussion: undefined as any,
+  listComments: undefined as any,
+  addComment: undefined as any,
+  react: undefined as any,
+  toggleSaveDiscussion: undefined as any,
+  reportContent: undefined as any,
 };
 
 // ─── Helpers da simulação TTS ───────────────────────────────────────────
@@ -616,4 +629,92 @@ Object.assign(localBackend, {
     }, 2000);
     return () => clearInterval(t);
   },
+} as any);
+
+// ─── Perfil social / comunidade (demo) ───
+function persona(id: string) { return (DEMO_SOCIAL.people as any[]).find((p) => p.id === id); }
+function toCommunityUser(p: any, online: boolean, isSelf: boolean, extra?: any): any {
+  return { id: p.id, name: p.name, color: p.color, bio: p.bio || '', lastSeen: Date.now() - (online ? 30_000 : 26 * 3600_000), online, isSelf, totalBooks: extra?.totalBooks ?? 12, readingNow: extra?.readingNow ?? 1 };
+}
+function ensureSocial(db: any) {
+  if (!db.mySocial) db.mySocial = {};
+  if (!db.discussions) db.discussions = [];
+  if (!db.dcomments) db.dcomments = [];
+  if (!db.dreactions) db.dreactions = [];
+  if (!db.savedDisc) db.savedDisc = [];
+  if (!db.followers) db.followers = [];
+}
+function myPublic(db: any, userId: string): any {
+  const s = db.mySocial || {};
+  return { id: userId, username: s.username || null, name: db.profile?.name || 'Eu', color: db.profile?.color || '#6e1f2b', bio: db.profile?.bio || '', lastSeen: Date.now(), online: true, cover: s.cover || '', about: s.about || '', location: s.location || '', website: s.website || '', pronouns: s.pronouns || '', genres: s.genres || [], authors: s.authors || [], books: s.books || [], music: s.music || [], interests: s.interests || [], followers: (db.followers || []).length, following: (db.following || []).length, totalBooks: db.books.length, discussionsCount: db.discussions.filter((d: any) => d.userId === userId).length, isSelf: true };
+}
+function personaPublic(p: any, db: any): any {
+  return { id: p.id, username: p.name.toLowerCase(), name: p.name, color: p.color, bio: p.bio, lastSeen: Date.now() - 30_000, online: true, cover: '', about: p.bio, location: '', website: '', pronouns: '', genres: p.genres, authors: [], books: [], music: [], interests: p.genres.map((g: string) => g.toLowerCase()), followers: 12, following: 8, totalBooks: 20, discussionsCount: db.discussions.filter((d: any) => d.userId === p.id).length, isSelf: false };
+}
+function decCounts(db: any, d: any) {
+  return { ...d, commentsCount: db.dcomments.filter((c: any) => c.discussionId === d.id).length, reactions: reactCounts(db, d.id), reactedByMe: db.dreactions.filter((r: any) => r.discussionId === d.id && r.userId === 'me').map((r: any) => r.emoji), savedByMe: db.savedDisc.includes(d.id) };
+}
+function reactCounts(db: any, id: string) {
+  const m: Record<string, number> = {};
+  db.dreactions.filter((r: any) => r.discussionId === id).forEach((r: any) => { m[r.emoji] = (m[r.emoji] || 0) + 1; });
+  return m;
+}
+
+Object.assign(localBackend, {
+  async getPublicProfile(userId: string, targetId: string) {
+    const db = loadDB(); ensureSocial(db);
+    if (targetId === userId) return myPublic(db, userId);
+    const p = persona(targetId);
+    if (p) { const pub = personaPublic(p, db); pub.followedByMe = db.following.includes(targetId); return pub; }
+    return null;
+  },
+  async updateSocial(userId: string, social: any, extra?: any) {
+    const db = loadDB(); ensureSocial(db);
+    db.mySocial = { ...db.mySocial, ...social };
+    if (db.profile) { if (extra?.name) db.profile.name = extra.name; if (extra?.bio) db.profile.bio = extra.bio; if (extra?.color) db.profile.color = extra.color; }
+    saveDB();
+  },
+  async getFollowers(userId: string) { const db = loadDB(); ensureSocial(db); return db.followers.map((id: string) => { const p = persona(id); return p ? toCommunityUser(p, true, false) : null; }).filter(Boolean); },
+  async getFollowing(userId: string) { const db = loadDB(); return db.following.map((id: string) => { const p = persona(id); return p ? toCommunityUser(p, true, false) : null; }).filter(Boolean); },
+  async searchUsers(userId: string, q: string) {
+    const db = loadDB(); const nq = q.trim().toLowerCase();
+    const all = (DEMO_SOCIAL.people as any[]).map((p) => toCommunityUser(p, true, false));
+    if (!nq) return all;
+    return all.filter((u) => u.name.toLowerCase().includes(nq) || (persona(u.id)?.genres || []).some((g: string) => g.toLowerCase().includes(nq)));
+  },
+  async listDiscussions(userId: string, mode: string) {
+    const db = loadDB(); ensureSocial(db);
+    let list = db.discussions.slice();
+    if (mode === 'following') list = list.filter((d: any) => db.following.includes(d.userId) || d.userId === userId);
+    const score = (d: any): number => { const c = decCounts(db, d); let s = Number(c.commentsCount) || 0; for (const k in (c.reactions as any)) s += Number((c.reactions as any)[k]) || 0; return s; };
+    if (mode === 'popular') list = list.sort((a: any, b: any) => score(b) - score(a));
+    else list = list.sort((a: any, b: any) => b.createdAt - a.createdAt);
+    return list.map((d: any) => decCounts(db, d));
+  },
+  async getDiscussion(userId: string, id: string) { const db = loadDB(); ensureSocial(db); const d = db.discussions.find((x: any) => x.id === id); return d ? decCounts(db, d) : null; },
+  async createDiscussion(userId: string, d: any) {
+    const db = loadDB(); ensureSocial(db);
+    const disc = { id: uid(), userId, title: d.title, content: d.content, category: d.category, bookId: d.bookId, authorName: d.authorName, tags: d.tags, status: 'published', createdAt: Date.now() };
+    db.discussions.unshift(disc); saveDB();
+    return decCounts(db, disc);
+  },
+  async listComments(userId: string, discussionId: string) { const db = loadDB(); ensureSocial(db); return db.dcomments.filter((c: any) => c.discussionId === discussionId).sort((a: any, b: any) => a.createdAt - b.createdAt); },
+  async addComment(userId: string, discussionId: string, content: string, parentId: string | null) {
+    const db = loadDB(); ensureSocial(db);
+    const c = { id: uid(), discussionId, userId, parentId, content, createdAt: Date.now() };
+    db.dcomments.push(c); saveDB(); return c;
+  },
+  async react(userId: string, discussionId: string, emoji: string) {
+    const db = loadDB(); ensureSocial(db);
+    const i = db.dreactions.findIndex((r: any) => r.discussionId === discussionId && r.userId === userId && r.emoji === emoji);
+    if (i >= 0) db.dreactions.splice(i, 1); else db.dreactions.push({ discussionId, userId, emoji });
+    saveDB();
+  },
+  async toggleSaveDiscussion(userId: string, discussionId: string) {
+    const db = loadDB(); ensureSocial(db);
+    const i = db.savedDisc.indexOf(discussionId);
+    if (i >= 0) db.savedDisc.splice(i, 1); else db.savedDisc.push(discussionId);
+    saveDB(); return i < 0;
+  },
+  async reportContent(userId: string, kind: string, id: string, reason: string) { /* demo: no-op */ },
 } as any);

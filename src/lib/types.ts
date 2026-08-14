@@ -377,11 +377,57 @@ export interface ChatMessage {
   at: number;
 }
 
+// ─── Perfil social / comunidade ───
+export interface FavBook { title: string; author: string; note?: string; rating?: number; category?: string; }
+export interface FavMusic { title: string; artist: string; album?: string; link?: string; note?: string; }
+export interface SocialProfile {
+  username?: string;
+  pronouns?: string;
+  location?: string;
+  website?: string;
+  cover?: string;
+  about?: string;
+  genres?: string[];
+  authors?: string[];
+  books?: FavBook[];
+  music?: FavMusic[];
+  interests?: string[];
+}
+export interface PublicProfile {
+  id: string;
+  username: string | null;
+  name: string;
+  color: string;
+  bio: string;
+  lastSeen: number;
+  online: boolean;
+  cover: string; about: string; location: string; website: string; pronouns: string;
+  genres: string[]; authors: string[]; books: FavBook[]; music: FavMusic[]; interests: string[];
+  followers: number; following: number; totalBooks: number; discussionsCount: number;
+  isSelf: boolean;
+  followedByMe?: boolean;
+}
+export interface Discussion {
+  id: string; userId: string; userName?: string; userColor?: string;
+  title: string; content: string; category: string;
+  bookId: string | null; bookTitle?: string; authorName: string | null;
+  tags: string[]; status: string; createdAt: number;
+  commentsCount?: number; reactions?: Record<string, number>; reactedByMe?: string[]; savedByMe?: boolean;
+}
+export interface DiscussionComment {
+  id: string; discussionId: string; userId: string; userName?: string; userColor?: string;
+  parentId: string | null; content: string; createdAt: number;
+}
+// Comentário de trecho/capítulo de livro (social antigo, migration 0002).
+export interface BookComment {
+  id: string; personId: string; bookId: string; chapter: number; text: string; likes: number; at: number;
+}
+
 export interface SocialBundle {
   people: Person[];
   following: string[];
   readers: Record<string, ReaderPresence[]>; // por bookId
   feed: FeedItem[];
-  comments: DiscussionComment[];
+  comments: BookComment[];
   clubs: Club[];
 }

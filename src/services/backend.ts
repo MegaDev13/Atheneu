@@ -16,6 +16,10 @@ import type {
   ChatMessage,
   CommunityUser,
   Conversation,
+  Discussion,
+  DiscussionComment,
+  PublicProfile,
+  SocialProfile,
   Goal,
   Highlight,
   Note,
@@ -119,4 +123,21 @@ export interface Backend {
   listMessages(userId: string, conversationId: string): Promise<ChatMessage[]>;
   sendMessage(userId: string, conversationId: string, text: string): Promise<ChatMessage>;
   onChatMessage(conversationId: string, cb: (m: ChatMessage) => void): () => void;
+
+  // ─── Perfil social ───
+  getPublicProfile(userId: string, targetId: string): Promise<PublicProfile | null>;
+  updateSocial(userId: string, social: SocialProfile, extra?: Partial<{ name: string; bio: string; color: string }>): Promise<void>;
+  getFollowers(userId: string, targetId: string): Promise<CommunityUser[]>;
+  getFollowing(userId: string, targetId: string): Promise<CommunityUser[]>;
+  searchUsers(userId: string, q: string): Promise<CommunityUser[]>;
+
+  // ─── Discussões / comunidade ───
+  listDiscussions(userId: string, mode: 'following' | 'discover' | 'popular'): Promise<Discussion[]>;
+  getDiscussion(userId: string, id: string): Promise<Discussion | null>;
+  createDiscussion(userId: string, d: { title: string; content: string; category: string; bookId: string | null; authorName: string | null; tags: string[] }): Promise<Discussion>;
+  listComments(userId: string, discussionId: string): Promise<DiscussionComment[]>;
+  addComment(userId: string, discussionId: string, content: string, parentId: string | null): Promise<DiscussionComment>;
+  react(userId: string, discussionId: string, emoji: string): Promise<void>;
+  toggleSaveDiscussion(userId: string, discussionId: string): Promise<boolean>;
+  reportContent(userId: string, kind: 'discussion' | 'comment', id: string, reason: string): Promise<void>;
 }

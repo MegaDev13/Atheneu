@@ -612,3 +612,118 @@ Object.assign(supabaseBackend, {
     return () => { supabase!.removeChannel(ch); };
   },
 } as any);
+
+// ─── Perfil social / comunidade (migration 0007) ───
+const ONLINE_MS2 = 3 * 60 * 1000;
+function mapPub(u: any, selfId: string): import('../lib/types').PublicProfile {
+  const now = Date.now();
+  return {
+    id: u.id, username: u.username || null, name: u.name || 'Leitor(a)', color: u.avatar_color || '#6e1f2b',
+    bio: u.bio || '', lastSeen: new Date(u.last_seen).getTime(), online: now - new Date(u.last_seen).getTime() < ONLINE_MS2,
+    cover: u.cover || '', about: u.about || '', location: u.location || '', website: u.website || '', pronouns: u.pronouns || '',
+    genres: u.genres || [], authors: u.authors || [], books: u.books || [], music: u.music || [], interests: u.interests || [],
+    followers: u.followers || 0, following: u.following || 0, totalBooks: u.total_books || 0, discussionsCount: u.discussions_count || 0,
+    isSelf: u.id === selfId,
+  };
+}
+function mapDisc(d: any): import('../lib/types').Discussion {
+  return { id: d.id, userId: d.user_id, userName: d.profiles?.name, userColor: d.profiles?.avatar_color, title: d.title, content: d.content, category: d.category, bookId: d.book_id, bookTitle: d.books?.title, authorName: d.author_name, tags: d.tags || [], status: d.status, createdAt: new Date(d.created_at).getTime() };
+}
+
+Object.assign(supabaseBackend, {
+  async getPublicProfile(userId: string, targetId: string) {
+    const { data, error } = await supabase!.from('public_profiles_ext').select('*').eq('id', targetId).maybeSingle();
+    req(data ?? {}, error);
+    if (!data) return null;
+    const p = mapPub(data, userId);
+    const { data: f } = await supabase!.from('follows').select('follower_id').eq('follower_id', userId).eq('followee_id', targetId).maybeSingle();
+    p.followedByMe = !!f;
+    return p;
+  },
+  async updateSocial(userId: string, social: any, extra?: any) {
+    const row: any = { id: userId, social };
+    if (extra?.name) row.name = extra.name;
+    if (extra?.bio) row.bio = extra.bio;
+    if (extra?.color) row.avatar_color = extra.color;
+    const { error } = await supabase!.from('profiles').update(row).eq('id', userId);
+    req({}, error);
+  },
+  async getFollowers(userId: string, targetId: string) {
+    const { data, error } = await supabase!.from('follows').select('follower_id, public_profiles_ext!follows_follower_id_fkey(*)').eq('followee_id', targetId);
+    req(data, error);
+    return (data as any[]).map((r) => mapPub(r.public_profiles_ext, userId)).map((u) => ({ id: u.id, name: u.name, color: u.color, bio: u.bio, lastSeen: u.lastSeen, online: u.online, isSelf: u.isSelf, totalBooks: u.totalBooks, readingNow: 0 }));
+  },
+  async getFollowing(userId: string, targetId: string) {
+    const { data, error } = await supabase!.from('follows').select('followee_id, public_profiles_ext!follows_followee_id_fkey(*)').eq('follower_id', targetId);
+    req(data, error);
+    return (data as any[]).map((r) => mapPub(r.public_profiles_ext, userId)).map((u) => ({ id: u.id, name: u.name, color: u.color, bio: u.bio, lastSeen: u.lastSeen, online: u.online, isSelf: u.isSelf, totalBooks: u.totalBooks, readingNow: 0 }));
+  },
+  async searchUsers(userId: string, q: string) {
+    let query = supabase!.from('public_profiles_ext').select('*').neq('id', userId).limit(30);
+    if (q.trim()) query = query.or(`name.ilike.%${q}%,username.ilike.%${q}%`);
+    const { data, error } = await query;
+    req(data, error);
+    return (data as any[]).map((u) => mapPub(u, userId)).map((u) => ({ id: u.id, name: u.name, color: u.color, bio: u.bio, lastSeen: u.lastSeen, online: u.online, isSelf: false, totalBooks: u.totalBooks, readingNow: 0 }));
+  },
+  async listDiscussions(userId: string, mode: string) {
+    let q = supabase!.from('discussions').select('*, profiles(name,avatar_color), books(title)').eq('status', 'published');
+    if (mode === 'following') {
+      const { data: f } = await supabase!.from('follows').select('followee_id').eq('follower_id', userId);
+      const ids = (f || []).map((x: any) => x.followee_id);
+      q = q.in('user_id', [...ids, userId]);
+    }
+    const { data, error } = await q.order('created_at', { ascending: false }).limit(50);
+    req(data, error);
+    const list = (data as any[]).map(mapDisc);
+    if (mode === 'popular') {
+      const withCounts = await Promise.all(list.map(async (d) => {
+        const [{ count: cc }, { count: rc }] = await Promise.all([
+          supabase!.from('discussion_comments').select('*', { count: 'exact', head: true }).eq('discussion_id', d.id),
+          supabase!.from('discussion_reactions').select('*', { count: 'exact', head: true }).eq('discussion_id', d.id),
+        ]);
+        return { ...d, commentsCount: cc || 0 };
+      }));
+      withCounts.sort((a, b) => ((b.commentsCount || 0)) - ((a.commentsCount || 0)));
+      return withCounts;
+    }
+    return list;
+  },
+  async getDiscussion(userId: string, id: string) {
+    const { data, error } = await supabase!.from('discussions').select('*, profiles(name,avatar_color), books(title)').eq('id', id).maybeSingle();
+    req(data ?? {}, error);
+    if (!data) return null;
+    return mapDisc(data);
+  },
+  async createDiscussion(userId: string, d: any) {
+    const { data, error } = await supabase!.from('discussions').insert({
+      user_id: userId, title: d.title, content: d.content, category: d.category,
+      book_id: d.bookId, author_name: d.authorName, tags: d.tags,
+    }).select().single();
+    req(data, error);
+    return mapDisc(data);
+  },
+  async listComments(userId: string, discussionId: string) {
+    const { data, error } = await supabase!.from('discussion_comments').select('*, profiles(name,avatar_color)').eq('discussion_id', discussionId).order('created_at');
+    req(data, error);
+    return (data as any[]).map((c) => ({ id: c.id, discussionId: c.discussion_id, userId: c.user_id, userName: c.profiles?.name, userColor: c.profiles?.avatar_color, parentId: c.parent_id, content: c.content, createdAt: new Date(c.created_at).getTime() }));
+  },
+  async addComment(userId: string, discussionId: string, content: string, parentId: string | null) {
+    const { data, error } = await supabase!.from('discussion_comments').insert({ discussion_id: discussionId, user_id: userId, content, parent_id: parentId }).select().single();
+    req(data, error);
+    return { id: data.id, discussionId, userId, parentId, content, createdAt: Date.now() } as any;
+  },
+  async react(userId: string, discussionId: string, emoji: string) {
+    const { data } = await supabase!.from('discussion_reactions').select('*').eq('discussion_id', discussionId).eq('user_id', userId).eq('emoji', emoji).maybeSingle();
+    if (data) await supabase!.from('discussion_reactions').delete().eq('discussion_id', discussionId).eq('user_id', userId).eq('emoji', emoji);
+    else await supabase!.from('discussion_reactions').insert({ discussion_id: discussionId, user_id: userId, emoji });
+  },
+  async toggleSaveDiscussion(userId: string, discussionId: string) {
+    const { data } = await supabase!.from('saved_discussions').select('*').eq('user_id', userId).eq('discussion_id', discussionId).maybeSingle();
+    if (data) { await supabase!.from('saved_discussions').delete().eq('user_id', userId).eq('discussion_id', discussionId); return false; }
+    await supabase!.from('saved_discussions').insert({ user_id: userId, discussion_id: discussionId });
+    return true;
+  },
+  async reportContent(userId: string, kind: string, id: string, reason: string) {
+    await supabase!.from('reports').insert({ reporter_id: userId, target_kind: kind, target_id: id, reason });
+  },
+} as any);

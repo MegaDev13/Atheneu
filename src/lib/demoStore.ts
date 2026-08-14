@@ -11,7 +11,7 @@ import type {
   Book,
   Chapter,
   Club,
-  DiscussionComment,
+  BookComment,
   FeedItem,
   Goal,
   Highlight,
@@ -53,6 +53,12 @@ export interface DemoDB {
   aiLog: { operation: string; hash: string | null; model: string; status: string; tokensEstimated: number; at: number }[];
   annotations: any[];
   chat: { conversations: any[]; messages: any[] };
+  mySocial: any;
+  discussions: any[];
+  dcomments: any[];
+  dreactions: any[];
+  savedDisc: string[];
+  followers: string[];
 }
 
 export interface DemoWorker {
@@ -223,6 +229,27 @@ function seedDB(): DemoDB {
     aiLog: [],
     annotations: [],
     chat: { conversations: [], messages: [] },
+    mySocial: {
+      username: 'shay', pronouns: '', location: 'Brasil', website: '',
+      cover: '', about: 'Sou apaixonado por filosofia, literatura russa e história antiga. Gosto de ler à noite.',
+      genres: ['Filosofia', 'Literatura'], authors: ['Dostoiévski', 'Machado de Assis'],
+      books: [{ title: 'Crime e Castigo', author: 'Fiódor Dostoiévski', note: 'Meu favorito', rating: 5, category: 'favorito' }],
+      music: [{ title: 'Clair de Lune', artist: 'Debussy', note: 'Para ler à noite' }],
+      interests: ['filosofia', 'literatura russa', 'história antiga'],
+    },
+    discussions: [
+      { id: 'd-seed1', userId: 'p-maria', title: 'O niilismo em Dostoiévski é desespero ou libertação?', content: 'Relendo **Crime e Castigo**, fiquei com a sensação de que o niilismo de Raskólnikov não é só destruição — é também uma tentativa dolorida de reconstruir.\n\n> Se a alma é imortal, tudo muda.\n\nO que vocês acham?', category: 'Filosofia', bookId: 'b-crime', authorName: 'Dostoiévski', tags: ['niilismo', 'dostoiévski'], status: 'published', createdAt: now - 2 * DAY },
+      { id: 'd-seed2', userId: 'p-joao', title: 'Marco Aurélio: a cidadela interior ainda faz sentido?', content: 'A ideia de recuar para a própria mente como refúgio (*cidadela interior*) me parece muito atual numa era de ruído constante.\n\n- Alguém aplica isso no dia a dia?\n- Como lidar quando o "refúgio" vira fuga?', category: 'Filosofia', bookId: 'b-meditacoes', authorName: 'Marco Aurélio', tags: ['estoicismo'], status: 'published', createdAt: now - 5 * DAY },
+      { id: 'd-seed3', userId: 'p-carlos', title: 'Machado de Assis: Capitu traiu ou não? (sem brigas 😄)', content: 'A pergunta eterna. Meu argumento: o narrador é *ciumento e não confiável*, então o livro é sobre a impossibilidade de saber.\n\n---\n\nQuero ouvir leituras diferentes!', category: 'Literatura', bookId: 'b-casmurro', authorName: 'Machado de Assis', tags: ['machado', 'literatura-brasileira'], status: 'published', createdAt: now - 8 * DAY },
+    ],
+    dcomments: [
+      { id: 'c-seed1', discussionId: 'd-seed1', userId: 'p-joao', parentId: null, content: 'Para mim é libertação que vira peso — ele se liberta da moral e descobre que não sabia viver sem ela.', createdAt: now - 1 * DAY },
+      { id: 'c-seed2', discussionId: 'd-seed1', userId: 'p-maria', parentId: 'c-seed1', content: 'Exato! A liberdade sem chão é o verdadeiro castigo.', createdAt: now - 20 * 3600000 },
+      { id: 'c-seed3', discussionId: 'd-seed3', userId: 'p-ana', parentId: null, content: 'O livro é um tribunal sem veredicto — e essa é a genialidade.', createdAt: now - 6 * DAY },
+    ],
+    dreactions: [ { discussionId: 'd-seed1', userId: 'p-joao', emoji: '💡' }, { discussionId: 'd-seed3', userId: 'p-maria', emoji: '❤️' } ],
+    savedDisc: [],
+    followers: ['p-maria', 'p-joao'],
   };
 }
 
@@ -259,7 +286,7 @@ const SOCIAL_READERS: Record<string, { personId: string; progress: number; page:
   'b-sisifo': [{ personId: 'p-joao', progress: 0.9, page: 121 }],
 };
 
-const SOCIAL_COMMENTS: DiscussionComment[] = [
+const SOCIAL_COMMENTS: BookComment[] = [
   { id: 'd1', personId: 'p-joao', bookId: 'b-crime', chapter: 0, text: 'Essa passagem do "primeiro passo" muda completamente a interpretação do personagem. Ele já se condenou antes do ato.', likes: 12, at: now - 6 * 3600000 },
   { id: 'd2', personId: 'p-maria', bookId: 'b-crime', chapter: 0, text: 'Discordo em parte. Acho que ele ainda acredita na própria teoria — o que desmorona é o corpo, não a ideia.', likes: 8, at: now - 5 * 3600000 },
   { id: 'd3', personId: 'p-carlos', bookId: 'b-crime', chapter: 2, text: 'O bilhete da família no fim do capítulo é o momento em que o amor vira tribunal. Dostoiévski é cruel demais.', likes: 15, at: now - 3 * 3600000 },

@@ -243,7 +243,70 @@ export default function Profile() {
             </p>
           )}
         </Card>
+
+        <SocialEditor />
       </div>
     </div>
+  );
+}
+
+// ─── Editor de perfil social (identidade + preferências literárias) ───
+function SocialEditor() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [sp, setSp] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (user) backend.getPublicProfile(user.id, user.id).then((p) => setSp({
+      username: p?.username || '', about: p?.about || '', location: p?.location || '', website: p?.website || '', pronouns: p?.pronouns || '',
+      genres: (p?.genres || []).join(', '), authors: (p?.authors || []).join(', '), interests: (p?.interests || []).join(', '),
+      cover: p?.cover || '',
+    }));
+  }, [user?.id]);
+
+  if (!sp) return null;
+  const list = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
+
+  async function save() {
+    if (!user) return;
+    setBusy(true);
+    await backend.updateSocial(user.id, {
+      username: sp.username, about: sp.about, location: sp.location, website: sp.website, pronouns: sp.pronouns,
+      genres: list(sp.genres), authors: list(sp.authors), interests: list(sp.interests), cover: sp.cover,
+    });
+    setBusy(false);
+    toast('Perfil social salvo.');
+  }
+
+  const inp = (k: string, label: string, ph: string, area = false) => (
+    <label className="block"><span className="mb-1 block text-[13px] text-mute">{label}</span>
+      {area
+        ? <textarea value={sp[k]} onChange={(e) => setSp({ ...sp, [k]: e.target.value })} rows={3} placeholder={ph} className="w-full rounded-xl border border-line bg-card2/50 p-3 text-[14px] text-ink focus:border-gold focus:outline-none" />
+        : <Input value={sp[k]} onChange={(e) => setSp({ ...sp, [k]: e.target.value })} placeholder={ph} />}
+    </label>
+  );
+
+  return (
+    <Card className="p-6 md:col-span-2">
+      <p className="smallcaps mb-4">perfil social & preferências literárias</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {inp('username', 'Username (@)', 'thiago')}
+        {inp('pronouns', 'Pronomes (opcional)', 'ele/dele')}
+        {inp('location', 'Localização (opcional)', 'Brasil')}
+        {inp('website', 'Website (opcional)', 'https://…')}
+        <div className="sm:col-span-2">{inp('about', 'Sobre mim', 'Escreva livremente sobre você…', true)}</div>
+        {inp('genres', 'Gêneros favoritos (vírgula)', 'Filosofia, Literatura')}
+        {inp('authors', 'Autores favoritos (vírgula)', 'Dostoiévski, Machado')}
+        {inp('interests', 'Interesses / temas (vírgula)', 'filosofia, história antiga')}
+        <label className="block"><span className="mb-1 block text-[13px] text-mute">Imagem de capa (URL ou upload)</span>
+          <input type="file" accept="image/*" className="block w-full text-[12px] text-mute" onChange={async (e) => {
+            const f = e.target.files?.[0]; if (!f) return;
+            const r = new FileReader(); r.onload = () => setSp({ ...sp, cover: String(r.result) }); r.readAsDataURL(f);
+          }} />
+        </label>
+      </div>
+      <div className="mt-4 flex justify-end"><Button onClick={save} loading={busy}>Salvar perfil social</Button></div>
+    </Card>
   );
 }

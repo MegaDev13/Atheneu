@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, Heart, Lightbulb, MessageCircle, Users, MessageSquare } from 'lucide-react';
 import { backend } from '../services/api';
@@ -19,6 +19,7 @@ const REACTIONS = [
 export default function Clube() {
   const { user, profile } = useAuth();
   const [params, setParams] = useSearchParams();
+  const nav = useNavigate();
   const tab = params.get('t') || 'feed';
 
   const [social, setSocial] = useState<SocialBundle | null>(null);
@@ -128,9 +129,13 @@ export default function Clube() {
                     />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium text-ink">
+                    <button
+                      onClick={() => nav(`/app/perfil/${u.id}`)}
+                      className="block max-w-full truncate text-[13px] font-medium text-ink hover:text-wine hover:underline"
+                      title={`Ver perfil de ${u.name}`}
+                    >
                       {u.name} <span className="text-[10.5px] font-normal text-faint">{u.online ? '🟢 online' : '⚪ offline'}</span>
-                    </p>
+                    </button>
                     <p className="truncate text-[11.5px] text-faint">
                       {u.totalBooks} livro{u.totalBooks === 1 ? '' : 's'} · {u.readingNow} lendo agora
                     </p>

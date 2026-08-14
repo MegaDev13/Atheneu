@@ -93,9 +93,21 @@ export function localDesigner(prompt: string, current: ThemeConfig): ThemeConfig
   return mergePatch(current, patch);
 }
 
+// heurística de complexidade: usa Gemini só quando o pedido é específico/exigente (§ pedido)
+export function isComplexPrompt(p: string): boolean {
+  const s = p.toLowerCase();
+  const aspects = ['cor', 'sidebar', 'transpar', 'vidro', 'fonte', 'sombra', 'brilho', 'arredond', 'espaç', 'anima', 'card', 'botão', 'botao', 'menu', 'header', 'neon', 'gradiente', 'densidade', 'tipografia']
+    .filter((w) => s.includes(w)).length;
+  const multi = (s.match(/ e /g) || []).length + (s.match(/,/g) || []).length;
+  return s.length > 60 || aspects >= 2 || multi >= 2 || aspects >= 1 && s.length > 30;
+}
+
 // ─── entrada única ───
 export async function generateTheme(prompt: string, current: ThemeConfig): Promise<ThemeConfig> {
-  if (aiAvailable()) {
+  const complex = isComplexPrompt(prompt);
+  // Simples → designer local (rápido, offline, não gasta cota).
+  // Complexo/específico + Gemini disponível → Gemini.
+  if (aiAvailable() && complex) {
     try {
       const provider = getAIProvider();
       const full = `${DESIGNER_PROMPT}\n\nTEMA ATUAL (JSON):\n${JSON.stringify(current)}\n\nPEDIDO DO USUÁRIO:\n"${prompt}"\n\nRetorne SOMENTE o JSON parcial.`;

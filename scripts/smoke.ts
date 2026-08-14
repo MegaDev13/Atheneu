@@ -241,6 +241,24 @@ async function main() {
   const cr = schema.contrastRatio('#241e15', '#f2ecdf');
   ok('tema: contraste do tema padrão >= 7 (acessível)', (cr || 0) >= 7);
 
+  // ═══ Módulo social ═══
+  const rich = await import('../src/lib/rich');
+  ok('social: sanitize remove <script>/tags', rich.sanitizeText('<script>alert(1)</script>olá <b>x</b>') === 'alert(1)olá x' || !rich.sanitizeText('<script>alert(1)</script>').includes('<script>'));
+  const d = await localBackend.createDiscussion('u1', { title: 'Teste de discussão', content: 'Conteúdo **livre**', category: 'Filosofia', bookId: null, authorName: null, tags: ['filosofia'] });
+  ok('social: criar discussão', !!d.id && d.title === 'Teste de discussão');
+  const c1 = await localBackend.addComment('u1', d.id, 'Comentário raiz', null);
+  const c2 = await localBackend.addComment('u1', d.id, 'Resposta', c1.id);
+  const cs = await localBackend.listComments('u1', d.id);
+  ok('social: comentário + resposta encadeada', cs.length === 2 && c2.parentId === c1.id);
+  await localBackend.react('u1', d.id, '💡');
+  const dg = await localBackend.getDiscussion('u1', d.id);
+  ok('social: reação registrada', (dg.reactions['💡'] || 0) === 1);
+  const prof = await localBackend.getPublicProfile('u1', 'u1');
+  ok('social: perfil próprio com contadores', prof.isSelf === true && typeof prof.followers === 'number');
+  await localBackend.updateSocial('u1', { genres: ['Filosofia'], about: 'teste' });
+  const prof2 = await localBackend.getPublicProfile('u1', 'u1');
+  ok('social: updateSocial persiste', (prof2.genres || []).includes('Filosofia'));
+
   console.log(failures === 0 ? '\n🎉 Todos os testes passaram.' : `\n❌ ${failures} teste(s) falharam.`);
   process.exit(failures === 0 ? 0 : 1);
 }
