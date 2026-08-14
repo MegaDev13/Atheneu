@@ -502,6 +502,21 @@ Object.assign(supabaseBackend, {
 // ─── Comunidade: presença + chat (migrations 0002/0006) ───
 const ONLINE_WINDOW = 3 * 60 * 1000;
 
+// Id determinístico p/ DM (mesmo par → mesma conversa), sem uuid v5 nativo
+function dmConversationId(a: string, b: string): string {
+  const [x, y] = [a, b].sort();
+  const s = 'dm|' + x + '|' + y;
+  const bytes = new TextEncoder().encode(s);
+  const words: number[] = [];
+  for (let seed = 0; seed < 8; seed++) {
+    let h = (0x811c9dc5 ^ Math.imul(seed + 1, 0x9e3779b9)) >>> 0;
+    for (let i = 0; i < bytes.length; i++) { h ^= bytes[i]; h = Math.imul(h, 0x01000193) >>> 0; }
+    words.push(h >>> 0);
+  }
+  const hx = words.map((w) => w.toString(16).padStart(8, '0')).join('');
+  return `${hx.slice(0, 8)}-${hx.slice(8, 12)}-4${hx.slice(13, 16)}-a${hx.slice(17, 20)}-${hx.slice(20, 32)}`;
+}
+
 Object.assign(supabaseBackend, {
   async listUsers(userId: string): Promise<import('../lib/types').CommunityUser[]> {
     const { data, error } = await supabase!.from('public_users').select('*');
@@ -555,24 +570,14 @@ Object.assign(supabaseBackend, {
   },
 
   async openDm(userId: string, otherId: string): Promise<import('../lib/types').Conversation[]> {
-    // procura DM existente entre os dois
-    const { data: mine } = await supabase!.from('conversation_members').select('conversation_id').eq('user_id', userId);
-    const ids = (mine || []).map((m: any) => m.conversation_id);
-    let convId: string | null = null;
-    if (ids.length) {
-      const { data: theirs } = await supabase!.from('conversation_members')
-        .select('conversation_id').eq('user_id', otherId).in('conversation_id', ids);
-      convId = theirs?.[0]?.conversation_id || null;
-    }
-    if (!convId) {
-      const { data: created, error } = await supabase!.from('conversations')
-        .insert({ kind: 'dm' }).select().single();
-      req(created, error);
-      convId = created.id;
-      const { error: em } = await supabase!.from('conversation_members')
-        .insert([{ conversation_id: convId, user_id: userId }, { conversation_id: convId, user_id: otherId }]);
-      req({}, em);
-    }
+    // DM determinística: o mesmo par de usuários sempre deriva o mesmo id,
+    // então os dois lados encontram a mesma conversa sem RETURNING (RLS-safe).
+    const id = dmConversationId(userId, otherId);
+    const e1: any = await supabase!.from('conversations').insert({ id, kind: 'dm' }).then((r) => r.error);
+    if (e1 && e1.code !== '23505') req({}, e1);
+    const e2: any = await supabase!.from('conversation_members')
+      .insert({ conversation_id: id, user_id: userId }).then((r) => r.error);
+    if (e2 && e2.code !== '23505') req({}, e2);
     return (supabaseBackend as any).listConversations(userId);
   },
 
