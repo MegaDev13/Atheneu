@@ -285,3 +285,18 @@ GEMINI → somente quando necessário → cache? → limite diário → rate lim
 - **Performance**: code splitting por rota, lazy loading, dados sob demanda (§37).
 - **Retenção saudável**: sem mecanismos artificiais de vício — a pessoa fica porque há algo
   interessante acontecendo dentro da biblioteca dela (§85).
+
+---
+
+## 🎨 Theme Engine (temas gerados por IA)
+
+Arquitetura **Design Tokens + Componentes + Theme Engine**, totalmente separada da lógica:
+
+- `src/theme/schema.ts` — schema versionado, validação/sanitização (tema = dados, nunca código; bloqueia `javascript:`, `eval`, `@import`, etc.) e mapeamento token→variável CSS.
+- `src/theme/presets.ts` — 12 presets (Light, Dark, AMOLED, Minimal, Glass, Cyberpunk, Terminal, Retro, Medieval, Nature, Professional, Futuristic) usando o MESMO engine.
+- `src/theme/engine.ts` — aplicar/preview/salvar/duplicar/excluir/importar/exportar/histórico (undo/redo)/restaurar padrão. Persiste em `localStorage` e reaplica no boot.
+- `src/theme/ai.ts` — IA de temas: com Gemini usa prompt estruturado de "theme designer" que devolve só JSON parcial; sem Gemini usa designer local incremental (funciona offline).
+- `src/pages/Appearance.tsx` — página **Personalizar aparência** (rota `/app/aparencia`): Modo IA, Modo Manual, Preview, Presets, Temas salvos, Histórico, Import/Export (`.theme.json`).
+
+O tema só escreve variáveis CSS no `<html>` — nunca toca em lógica, auth, banco, rotas ou segurança.
+Como o Tailwind aponta `cores/radius/sombras/fontes` para `var(--…)`, **todos os componentes existentes mudam de tema sem reescrever nenhum componente**.
