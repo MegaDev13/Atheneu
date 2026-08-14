@@ -245,8 +245,111 @@ export default function Profile() {
         </Card>
 
         <SocialEditor />
+        <PrivacyPanel />
       </div>
     </div>
+  );
+}
+
+const FIELD_LABELS: Array<[string, string]> = [
+  ['about', 'Sobre mim'], ['location', 'Localização'], ['website', 'Website'], ['bio', 'Biografia'],
+  ['books', 'Livros favoritos'], ['authors', 'Autores favoritos'], ['music', 'Música favorita'],
+  ['interests', 'Interesses'], ['activity', 'Atividade'], ['discussions', 'Discussões'],
+  ['followers', 'Seguidores'], ['following', 'Seguindo'],
+];
+const VIS_OPTS: Array<[string, string]> = [['public', 'Público'], ['followers', 'Seguidores'], ['mutual', 'Seguidores mútuos'], ['private', 'Privado']];
+
+// Painel de privacidade (visibilidade por campo + perfil + mensagens + notificações + preview)
+function PrivacyPanel() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [priv, setPriv] = useState<any>(null);
+  const [nprefs, setNprefs] = useState<any>(null);
+  const [previewAs, setPreviewAs] = useState<'public' | 'follower' | 'mutual' | 'self'>('public');
+  const [preview, setPreview] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    backend.getPrivacy(user.id).then(setPriv);
+    backend.getNotifyPrefs(user.id).then(setNprefs);
+  }, [user?.id]);
+  useEffect(() => { if (user) backend.previewProfile(user.id, previewAs).then(setPreview); }, [previewAs, user?.id]);
+
+  if (!priv || !nprefs) return null;
+  const setField = (f: string, v: string) => setPriv({ ...priv, fields: { ...priv.fields, [f]: v } });
+
+  async function save() {
+    if (!user) return;
+    setSaving(true);
+    await backend.updatePrivacy(user.id, priv);
+    await backend.setNotifyPrefs(user.id, nprefs);
+    setSaving(false);
+    toast('Privacidade e notificações salvas.');
+  }
+
+  const chan = (key: string, label: string) => (
+    <div className="rounded-xl border border-line p-3">
+      <p className="mb-2 text-[13px] font-medium text-ink">{label}</p>
+      <div className="flex gap-4">
+        {(['site', 'email'] as const).map((ch) => (
+          <label key={ch} className="flex items-center gap-2 text-[12.5px] text-mute">
+            <input type="checkbox" checked={nprefs[key]?.[ch] !== false} onChange={(e) => setNprefs({ ...nprefs, [key]: { ...nprefs[key], [ch]: e.target.checked } })} />
+            {ch === 'site' ? 'No site' : 'E-mail'}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <Card className="p-6 md:col-span-2">
+      <p className="smallcaps mb-4">privacidade · o que as pessoas podem ver</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block"><span className="mb-1 block text-[13px] text-mute">Quem pode ver meu perfil?</span>
+          <select value={priv.profile} onChange={(e) => setPriv({ ...priv, profile: e.target.value })} className="h-10 w-full rounded-xl border border-line bg-card2/50 px-3 text-[14px] text-ink focus:border-gold focus:outline-none">
+            <option value="all">Todos</option><option value="registered">Usuários cadastrados</option>
+            <option value="followers">Somente seguidores</option><option value="none">Ninguém além de mim</option>
+          </select></label>
+        <label className="block"><span className="mb-1 block text-[13px] text-mute">Quem pode me enviar mensagens?</span>
+          <select value={priv.messages} onChange={(e) => setPriv({ ...priv, messages: e.target.value })} className="h-10 w-full rounded-xl border border-line bg-card2/50 px-3 text-[14px] text-ink focus:border-gold focus:outline-none">
+            <option value="all">Todos</option><option value="following">Só pessoas que sigo</option>
+            <option value="followers">Só seguidores</option><option value="mutual">Só seguidores mútuos</option><option value="none">Ninguém</option>
+          </select></label>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {FIELD_LABELS.map(([f, l]) => (
+          <label key={f} className="flex items-center justify-between gap-2 rounded-xl border border-line p-2.5">
+            <span className="text-[13px] text-ink">{l}</span>
+            <select value={priv.fields?.[f] || 'public'} onChange={(e) => setField(f, e.target.value)} className="h-8 rounded-lg border border-line bg-card2/50 px-2 text-[12px] text-ink focus:outline-none">
+              {VIS_OPTS.map(([v, vl]) => <option key={v} value={v}>{vl}</option>)}
+            </select>
+          </label>
+        ))}
+      </div>
+
+      <p className="smallcaps mb-2 mt-6">notificações (canais independentes)</p>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {chan('message', 'Mensagens')}{chan('follow', 'Novos seguidores')}{chan('reply', 'Respostas')}
+        {chan('mention', 'Menções')}{chan('activity', 'Atividade')}
+      </div>
+
+      <p className="smallcaps mb-2 mt-6">visualizar meu perfil como</p>
+      <div className="mb-3 flex gap-1 rounded-xl border border-line p-1 w-fit">
+        {([['public', 'Pública'], ['follower', 'Seguidor'], ['mutual', 'Mútuo'], ['self', 'Privada']] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setPreviewAs(k)} className={`rounded-lg px-3 py-1.5 text-[12.5px] ${previewAs === k ? 'bg-wine text-[#f7f0e2]' : 'text-mute'}`}>{l}</button>
+        ))}
+      </div>
+      {preview && (
+        <div className="rounded-xl border border-line bg-card2/40 p-4 text-[13px] text-mute">
+          <p className="font-medium text-ink">{preview.name} {preview.username && <span className="text-wine">@{preview.username}</span>}</p>
+          <p>{preview.about ? `Sobre: ${preview.about}` : 'Sobre: (oculto)'}</p>
+          <p>Livros: {preview.books?.length ? preview.books.map((b: any) => b.title).join(', ') : '(oculto)'} · Música: {preview.music?.length ? 'visível' : '(oculta)'} · Localização: {preview.location || '(oculta)'}</p>
+        </div>
+      )}
+
+      <div className="mt-5 flex justify-end"><Button onClick={save} loading={saving}>Salvar privacidade</Button></div>
+    </Card>
   );
 }
 

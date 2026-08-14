@@ -638,7 +638,12 @@ Object.assign(supabaseBackend, {
     const p = mapPub(data, userId);
     const { data: f } = await supabase!.from('follows').select('follower_id').eq('follower_id', userId).eq('followee_id', targetId).maybeSingle();
     p.followedByMe = !!f;
-    return p;
+    // aplica visibilidade/permissão no backend (nunca só no frontend)
+    const { data: prof } = await supabase!.from('profiles').select('privacy').eq('id', targetId).maybeSingle();
+    const { data: fMe } = await supabase!.from('follows').select('follower_id').eq('follower_id', targetId).eq('followee_id', userId).maybeSingle();
+    const priv = (await import('../lib/visibility')).normalizePrivacy(prof?.privacy);
+    const viewer = { isSelf: targetId === userId, viewerFollowsTarget: !!f, targetFollowsViewer: !!fMe };
+    return (await import('../lib/visibility')).filterProfile(p, priv, viewer);
   },
   async updateSocial(userId: string, social: any, extra?: any) {
     const row: any = { id: userId, social };
@@ -727,3 +732,86 @@ Object.assign(supabaseBackend, {
     await supabase!.from('reports').insert({ reporter_id: userId, target_kind: kind, target_id: id, reason });
   },
 } as any);
+
+// ─── Perfil: privacidade/preview + mensagens/permissões/notificações ───
+Object.assign(supabaseBackend, {
+  async getPrivacy(userId: string) {
+    const { data } = await supabase!.from('profiles').select('privacy').eq('id', userId).maybeSingle();
+    return (await import('../lib/visibility')).normalizePrivacy(data?.privacy);
+  },
+  async updatePrivacy(userId: string, privacy: any) {
+    const { data } = await supabase!.from('profiles').select('privacy').eq('id', userId).maybeSingle();
+    const merged = { ...(data?.privacy || {}), ...(await import('../lib/visibility')).normalizePrivacy(privacy) };
+    const { error } = await supabase!.from('profiles').update({ privacy: merged }).eq('id', userId);
+    req({}, error);
+  },
+  async previewProfile(userId: string, as: string) {
+    const { data } = await supabase!.from('public_profiles_ext').select('*').eq('id', userId).maybeSingle();
+    if (!data) return null as any;
+    const full = mapPub(data, userId);
+    const { data: prof } = await supabase!.from('profiles').select('privacy').eq('id', userId).maybeSingle();
+    const priv = (await import('../lib/visibility')).normalizePrivacy(prof?.privacy);
+    const v = as === 'self' ? { isSelf: true, viewerFollowsTarget: true, targetFollowsViewer: true }
+      : as === 'follower' ? { isSelf: false, viewerFollowsTarget: true, targetFollowsViewer: false }
+      : as === 'mutual' ? { isSelf: false, viewerFollowsTarget: true, targetFollowsViewer: true }
+      : { isSelf: false, viewerFollowsTarget: false, targetFollowsViewer: false };
+    return (await import('../lib/visibility')).filterProfile(full as any, priv, v);
+  },
+  async canMessage(userId: string, targetId: string) {
+    if (userId === targetId) return true;
+    const { data: blk } = await supabase!.from('blocks').select('blocker_id').eq('blocker_id', targetId).eq('blocked_id', userId).maybeSingle();
+    if (blk) return false;
+    const { data: prof } = await supabase!.from('profiles').select('privacy').eq('id', targetId).maybeSingle();
+    const priv = (await import('../lib/visibility')).normalizePrivacy(prof?.privacy);
+    const { data: f1 } = await supabase!.from('follows').select('follower_id').eq('follower_id', userId).eq('followee_id', targetId).maybeSingle();
+    const { data: f2 } = await supabase!.from('follows').select('follower_id').eq('follower_id', targetId).eq('followee_id', userId).maybeSingle();
+    return (await import('../lib/visibility')).canMessage(priv, { isSelf: false, viewerFollowsTarget: !!f1, targetFollowsViewer: !!f2 }, false);
+  },
+  async blockUser(userId: string, targetId: string) {
+    const { error } = await supabase!.from('blocks').upsert({ blocker_id: userId, blocked_id: targetId });
+    req({}, error);
+  },
+  async getUnreadCount(userId: string) {
+    const { data: mem } = await supabase!.from('conversation_members').select('conversation_id, last_read_at').eq('user_id', userId);
+    let n = 0;
+    for (const m of mem || []) {
+      const since = m.last_read_at ? new Date(m.last_read_at).toISOString() : new Date(0).toISOString();
+      const { count } = await supabase!.from('messages').select('*', { count: 'exact', head: true })
+        .eq('conversation_id', m.conversation_id).neq('user_id', userId).gte('created_at', since);
+      n += count || 0;
+    }
+    return n;
+  },
+  async markConversationRead(userId: string, conversationId: string) {
+    const { error } = await supabase!.from('conversation_members').update({ last_read_at: new Date().toISOString() })
+      .eq('user_id', userId).eq('conversation_id', conversationId);
+    req({}, error);
+  },
+  async getNotifyPrefs(userId: string) {
+    const { data } = await supabase!.from('profiles').select('notify_prefs').eq('id', userId).maybeSingle();
+    return data?.notify_prefs || { message: { site: true, email: true }, follow: { site: true, email: true }, reply: { site: true, email: true }, mention: { site: true, email: true }, activity: { site: true, email: false } };
+  },
+  async setNotifyPrefs(userId: string, prefs: any) {
+    const { error } = await supabase!.from('profiles').update({ notify_prefs: prefs }).eq('id', userId);
+    req({}, error);
+  },
+} as any);
+
+// ─── Notificação + fila de e-mail ao enviar mensagem (Supabase) ───
+const _sbSend = (supabaseBackend as any).sendMessage;
+(supabaseBackend as any).sendMessage = async function (userId: string, conversationId: string, text: string) {
+  const m = await _sbSend(userId, conversationId, text);
+  try {
+    const { data: mem } = await supabase!.from('conversation_members').select('user_id').eq('conversation_id', conversationId).neq('user_id', userId);
+    const other = mem?.[0]?.user_id;
+    if (other) {
+      const { data: prof } = await supabase!.from('profiles').select('notify_prefs, name').eq('id', other).maybeSingle();
+      const prefs = prof?.notify_prefs;
+      const wantSite = prefs ? prefs.message?.site !== false : true;
+      const wantEmail = prefs ? prefs.message?.email !== false : true;
+      if (wantSite) await supabase!.from('notifications').insert({ user_id: other, kind: 'MESSAGE_RECEIVED', icon: '💬', text: 'Você recebeu uma nova mensagem.', href: `/app/mensagens?c=${conversationId}` });
+      if (wantEmail) await supabase!.from('email_notifications').insert({ user_id: other, kind: 'MESSAGE_RECEIVED', payload: { conversationId, from: userId } });
+    }
+  } catch (e) { console.warn('[notif] falha ao notificar (mensagem já salva):', e); }
+  return m;
+};

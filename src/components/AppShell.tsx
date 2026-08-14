@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Home, LibraryBig, BookOpen, Headphones, Users, Brain, BarChart3, User,
-  Bell, LogOut, Moon, Sun, Timer, Plus, Monitor, Palette, MessagesSquare,
+  Bell, LogOut, Moon, Sun, Timer, Plus, Monitor, Palette, MessagesSquare, Mail,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -36,6 +36,7 @@ const NAV = [
   { to: '/app/dispositivos', icon: Monitor, label: 'Dispositivos' },
   { to: '/app/clube', icon: Users, label: 'Clube' },
   { to: '/app/comunidade', icon: MessagesSquare, label: 'Comunidade' },
+  { to: '/app/mensagens', icon: Mail, label: 'Mensagens' },
   { to: '/app/conhecimento', icon: Brain, label: 'Conhecimento' },
   { to: '/app/jornada', icon: BarChart3, label: 'Minha jornada' },
   { to: '/app/aparencia', icon: Palette, label: 'Aparência' },
@@ -141,6 +142,16 @@ export default function AppShell() {
   const { theme, toggle } = useTheme();
   const location = useLocation();
   const [demoNotice, setDemoNotice] = useState(() => !localStorage.getItem('atheneu-demo-dismissed'));
+  const [unread, setUnread] = useState(0);
+
+  // contador de mensagens não lidas (atualiza sem recarregar)
+  useEffect(() => {
+    if (!user) return;
+    const load = () => backend.getUnreadCount(user.id).then(setUnread).catch(() => {});
+    load();
+    const t = setInterval(load, 15_000);
+    return () => clearInterval(t);
+  }, [user?.id]);
 
   // Presença: heartbeat de "estou online" (independente de qualquer outra ação)
   useEffect(() => {
@@ -169,6 +180,9 @@ export default function AppShell() {
             >
               <Icon size={17} className="transition-transform duration-200 group-hover:scale-110" />
               {label}
+              {to === '/app/mensagens' && unread > 0 && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-wine px-1.5 text-[10px] font-bold text-[#f7f0e2]">{unread}</span>
+              )}
             </NavLink>
           ))}
         </nav>

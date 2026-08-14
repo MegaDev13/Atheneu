@@ -259,6 +259,29 @@ async function main() {
   const prof2 = await localBackend.getPublicProfile('u1', 'u1');
   ok('social: updateSocial persiste', (prof2.genres || []).includes('Filosofia'));
 
+  // ═══ Privacidade / mensagens / notificações ═══
+  await localBackend.updatePrivacy('u1', { profile: 'all', messages: 'followers', fields: { location: 'private', about: 'public' } });
+  const pubView = await localBackend.previewProfile('u1', 'public');
+  ok('priv: localização privada oculta p/ público', pubView.location === '');
+  const followerView = await localBackend.previewProfile('u1', 'follower');
+  ok('priv: preview seguidor retorna perfil', Array.isArray(followerView.books));
+  const selfView = await localBackend.previewProfile('u1', 'self');
+  ok('priv: preview próprio sempre completo', selfView.isSelf === true);
+  // mensagens: owner exige followers; estranho não pode, seguidor pode
+  ok('priv: estranho não pode enviar msg (messages=followers)', (await localBackend.canMessage('stranger', 'u1')) === false);
+  ok('priv: seguidor pode enviar msg', (await localBackend.canMessage('p-maria', 'u1')) === true);
+  // bloqueio impede
+  await localBackend.blockUser('u1', 'p-carlos');
+  ok('priv: bloqueado não pode enviar msg', (await localBackend.canMessage('p-carlos', 'u1')) === false);
+  // envio cria notificação + fila de e-mail
+  const convs0 = await localBackend.openDm('p-maria', 'u1');
+  const conv0 = convs0.find((c: any) => c.otherUserId === 'p-maria') || convs0[0];
+  await localBackend.sendMessage('p-maria', conv0.id, 'olá!');
+  const unreadN = await localBackend.getUnreadCount('u1');
+  ok('msg: contador de não-lidas > 0', unreadN > 0);
+  await localBackend.markConversationRead('u1', conv0.id);
+  ok('msg: marcar como lida zera contador', (await localBackend.getUnreadCount('u1')) === 0);
+
   console.log(failures === 0 ? '\n🎉 Todos os testes passaram.' : `\n❌ ${failures} teste(s) falharam.`);
   process.exit(failures === 0 ? 0 : 1);
 }

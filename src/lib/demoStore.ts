@@ -52,7 +52,9 @@ export interface DemoDB {
   aiCache: { hash: string; operation: string; response: string; model: string; createdAt: number; expiresAt: number }[];
   aiLog: { operation: string; hash: string | null; model: string; status: string; tokensEstimated: number; at: number }[];
   annotations: any[];
-  chat: { conversations: any[]; messages: any[] };
+  chat: { conversations: any[]; messages: any[]; lastRead?: Record<string, number>; emailQueue?: any[] };
+  blocked: string[];
+  notifyPrefs: any;
   mySocial: any;
   discussions: any[];
   dcomments: any[];
@@ -250,6 +252,8 @@ function seedDB(): DemoDB {
     dreactions: [ { discussionId: 'd-seed1', userId: 'p-joao', emoji: '💡' }, { discussionId: 'd-seed3', userId: 'p-maria', emoji: '❤️' } ],
     savedDisc: [],
     followers: ['p-maria', 'p-joao'],
+    blocked: [],
+    notifyPrefs: null,
   };
 }
 

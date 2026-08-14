@@ -140,4 +140,15 @@ export interface Backend {
   react(userId: string, discussionId: string, emoji: string): Promise<void>;
   toggleSaveDiscussion(userId: string, discussionId: string): Promise<boolean>;
   reportContent(userId: string, kind: 'discussion' | 'comment', id: string, reason: string): Promise<void>;
+
+  // ─── Perfil: privacidade/preview + mensagens (permissão/leitura/notif) ───
+  updatePrivacy(userId: string, privacy: any): Promise<void>;
+  getPrivacy(userId: string): Promise<any>;
+  previewProfile(userId: string, as: 'public' | 'follower' | 'mutual' | 'self'): Promise<PublicProfile>;
+  canMessage(userId: string, targetId: string): Promise<boolean>;
+  blockUser(userId: string, targetId: string): Promise<void>;
+  getUnreadCount(userId: string): Promise<number>;
+  markConversationRead(userId: string, conversationId: string): Promise<void>;
+  getNotifyPrefs(userId: string): Promise<any>;
+  setNotifyPrefs(userId: string, prefs: any): Promise<void>;
 }

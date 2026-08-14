@@ -24,6 +24,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const Appearance = lazy(() => import('./pages/Appearance'));
 const Community = lazy(() => import('./pages/Community'));
 const ProfilePublic = lazy(() => import('./pages/ProfilePublic'));
+const Messages = lazy(() => import('./pages/Messages'));
 
 function FullScreenLoader() {
   return (
@@ -108,6 +109,7 @@ export default function App() {
                       <Route path="perfil" element={<Profile />} />
                       <Route path="perfil/:id" element={<ProfilePublic />} />
                       <Route path="comunidade" element={<Community />} />
+                      <Route path="mensagens" element={<Messages />} />
                       <Route path="aparencia" element={<Appearance />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />

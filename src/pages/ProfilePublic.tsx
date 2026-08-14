@@ -17,8 +17,14 @@ export default function ProfilePublic() {
   const [p, setP] = useState<PublicProfile | null>(null);
   const [listOpen, setListOpen] = useState<'followers' | 'following' | null>(null);
   const [people, setPeople] = useState<CommunityUser[]>([]);
+  const [canMsg, setCanMsg] = useState(true);
 
-  async function load() { if (user && id) setP(await backend.getPublicProfile(user.id, id)); }
+  async function load() {
+    if (user && id) {
+      setP(await backend.getPublicProfile(user.id, id));
+      if (id !== user.id) backend.canMessage(user.id, id).then(setCanMsg).catch(() => setCanMsg(true));
+    }
+  }
   useEffect(() => { load(); }, [id, user?.id]);
 
   async function toggleFollow() {
@@ -48,7 +54,9 @@ export default function ProfilePublic() {
             <span className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-card text-2xl font-semibold text-[#f7f0e2]" style={{ background: p.color }}>{p.name[0]}</span>
             {!p.isSelf && (
               <div className="flex gap-2 pb-1">
-                <Button size="sm" variant="outline" onClick={() => { backend.openDm(user!.id, p.id); nav('/app/clube?t=chat'); }}><MessageSquare size={14} /> Mensagem</Button>
+                {canMsg && (
+                  <Button size="sm" variant="outline" onClick={async () => { await backend.openDm(user!.id, p.id); nav('/app/mensagens'); }}><MessageSquare size={14} /> Enviar mensagem</Button>
+                )}
                 <Button size="sm" onClick={toggleFollow}>{p.followedByMe ? <><UserCheck size={14} /> Seguindo</> : <><UserPlus size={14} /> Seguir</>}</Button>
               </div>
             )}

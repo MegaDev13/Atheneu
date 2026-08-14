@@ -432,6 +432,15 @@ export const localBackend: Backend = {
   react: undefined as any,
   toggleSaveDiscussion: undefined as any,
   reportContent: undefined as any,
+  updatePrivacy: undefined as any,
+  getPrivacy: undefined as any,
+  previewProfile: undefined as any,
+  canMessage: undefined as any,
+  blockUser: undefined as any,
+  getUnreadCount: undefined as any,
+  markConversationRead: undefined as any,
+  getNotifyPrefs: undefined as any,
+  setNotifyPrefs: undefined as any,
 };
 
 // ─── Helpers da simulação TTS ───────────────────────────────────────────
@@ -662,10 +671,12 @@ function reactCounts(db: any, id: string) {
 
 Object.assign(localBackend, {
   async getPublicProfile(userId: string, targetId: string) {
-    const db = loadDB(); ensureSocial(db);
-    if (targetId === userId) return myPublic(db, userId);
+    const db = loadDB(); ensureSocial(db); ensureChatMeta(db);
+    const priv = targetId === userId ? myPrivacy(db) : normalizePrivacy(persona(targetId)?.privacy);
+    const v = viewerFor(db, targetId, userId);
+    if (targetId === userId) return filterProfile(myPublic(db, userId), priv, v);
     const p = persona(targetId);
-    if (p) { const pub = personaPublic(p, db); pub.followedByMe = db.following.includes(targetId); return pub; }
+    if (p) { const pub = personaPublic(p, db); pub.followedByMe = db.following.includes(targetId); return filterProfile(pub, priv, v); }
     return null;
   },
   async updateSocial(userId: string, social: any, extra?: any) {
@@ -718,3 +729,70 @@ Object.assign(localBackend, {
   },
   async reportContent(userId: string, kind: string, id: string, reason: string) { /* demo: no-op */ },
 } as any);
+
+// ─── Perfil: privacidade/preview + mensagens/permissões/notificações (demo) ───
+import { normalizePrivacy, filterProfile, canMessage as cm, type Viewer } from '../lib/visibility';
+function myPrivacy(db: any) { return normalizePrivacy(db.profile?.privacySocial); }
+function viewerFor(db: any, targetId: string, selfId: string): Viewer {
+  return { isSelf: targetId === selfId, viewerFollowsTarget: db.following.includes(targetId), targetFollowsViewer: db.followers.includes(targetId) };
+}
+function ensureChatMeta(db: any) { if (!db.chat.lastRead) db.chat.lastRead = {}; if (!db.chat.emailQueue) db.chat.emailQueue = []; if (!db.blocked) db.blocked = []; if (!db.notifyPrefs) db.notifyPrefs = null; }
+function notify(db: any, userId: string, kind: string, text: string, href: string | null) {
+  if (!db.notifications) db.notifications = [];
+  db.notifications.unshift({ id: uid(), icon: kind === 'MESSAGE_RECEIVED' ? '💬' : kind === 'FOLLOW_RECEIVED' ? '👥' : '🔔', text, at: Date.now(), read: false, href, kind });
+}
+
+Object.assign(localBackend, {
+  async getPrivacy(userId: string) { const db = loadDB(); return myPrivacy(db); },
+  async updatePrivacy(userId: string, privacy: any) { const db = loadDB(); if (db.profile) db.profile.privacySocial = normalizePrivacy(privacy); saveDB(); },
+  async previewProfile(userId: string, as: string) {
+    const db = loadDB(); ensureSocial(db); ensureChatMeta(db);
+    const full = myPublic(db, userId);
+    const priv = myPrivacy(db);
+    const v: Viewer = as === 'self' ? { isSelf: true, viewerFollowsTarget: true, targetFollowsViewer: true }
+      : as === 'follower' ? { isSelf: false, viewerFollowsTarget: true, targetFollowsViewer: false }
+      : as === 'mutual' ? { isSelf: false, viewerFollowsTarget: true, targetFollowsViewer: true }
+      : { isSelf: false, viewerFollowsTarget: false, targetFollowsViewer: false };
+    return filterProfile(full, priv, v);
+  },
+  async canMessage(userId: string, targetId: string) {
+    const db = loadDB(); ensureChatMeta(db); ensureSocial(db);
+    if (userId === targetId) return true;
+    // dono (local) bloqueou o remetente?
+    if (db.blocked.includes(userId)) return false;
+    const ownerPriv = persona(targetId) ? normalizePrivacy(persona(targetId)?.privacy) : myPrivacy(db);
+    const v = { isSelf: false, viewerFollowsTarget: db.followers.includes(userId), targetFollowsViewer: db.following.includes(userId) };
+    return cm(ownerPriv, v, false);
+  },
+  async blockUser(userId: string, targetId: string) { const db = loadDB(); ensureChatMeta(db); if (!db.blocked.includes(targetId)) db.blocked.push(targetId); saveDB(); },
+  async getUnreadCount(userId: string) {
+    const db = loadDB(); ensureChatMeta(db);
+    let n = 0;
+    for (const c of db.chat.conversations as any[]) {
+      const last = (db.chat.lastRead as any)[c.id] || 0;
+      n += (db.chat.messages as any[]).filter((m: any) => m.conversationId === c.id && m.userId !== userId && m.at > last).length;
+    }
+    return n;
+  },
+  async markConversationRead(userId: string, conversationId: string) { const db = loadDB(); ensureChatMeta(db); (db.chat.lastRead as any)[conversationId] = Date.now(); saveDB(); },
+  async getNotifyPrefs(userId: string) { const db = loadDB(); ensureChatMeta(db); return db.notifyPrefs || { message: { site: true, email: true }, follow: { site: true, email: true }, reply: { site: true, email: true }, mention: { site: true, email: true }, activity: { site: true, email: false } }; },
+  async setNotifyPrefs(userId: string, prefs: any) { const db = loadDB(); ensureChatMeta(db); db.notifyPrefs = prefs; saveDB(); },
+} as any);
+
+// reforça sendMessage local: notificação interna + evento de e-mail (fila)
+const _origSend = (localBackend as any).sendMessage;
+(localBackend as any).sendMessage = async function (userId: string, conversationId: string, text: string) {
+  const m = await _origSend(userId, conversationId, text);
+  const db = loadDB(); ensureChatMeta(db);
+  const conv = (db.chat.conversations as any[]).find((c: any) => c.id === conversationId);
+  const other = conv?.otherUserId;
+  if (other) {
+    const prefs = db.notifyPrefs;
+    const wantSite = prefs ? prefs.message?.site !== false : true;
+    const wantEmail = prefs ? prefs.message?.email !== false : true;
+    if (wantSite) notify(db, other, 'MESSAGE_RECEIVED', 'Você recebeu uma nova mensagem.', `/app/mensagens?c=${conversationId}`);
+    if (wantEmail) (db.chat.emailQueue as any).push({ id: uid(), userId: other, kind: 'MESSAGE_RECEIVED', status: 'pending', conversationId, at: Date.now() });
+    saveDB();
+  }
+  return m;
+};

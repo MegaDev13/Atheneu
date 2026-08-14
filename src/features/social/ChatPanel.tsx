@@ -1,18 +1,19 @@
 // Chat entre usuários cadastrados (DM) — estilo WhatsApp/Discord:
 // clicar em 💬 abre DIRETO a conversa com todo o histórico; mensagens persistidas.
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, MessageSquare, Send } from 'lucide-react';
+import { ArrowLeft, Flag, MessageSquare, Send, ShieldBan } from 'lucide-react';
 import { backend } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { relTime } from '../../lib/utils';
 import type { ChatMessage, Conversation } from '../../lib/types';
 
-export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string | null; onConsumedDm: () => void }) {
+export default function ChatPanel({ activeDm, onConsumedDm, initialConversation }: { activeDm: string | null; onConsumedDm: () => void; initialConversation?: string | null }) {
   const { user } = useAuth();
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [active, setActive] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
+  const [allowed, setAllowed] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -24,6 +25,9 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
   }
 
   useEffect(() => { refresh(); }, [user?.id]);
+
+  // Abrir conversa direta via ?c= (link de e-mail/notificação)
+  useEffect(() => { if (initialConversation) setActive(initialConversation); }, [initialConversation]);
 
   // Abrir DM solicitado pelo diretório de leitores (💬)
   useEffect(() => {
@@ -37,15 +41,20 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
     })();
   }, [activeDm, user?.id]);
 
-  // Carrega histórico + realtime da conversa ativa
+  // Carrega histórico + realtime + marca como lida + verifica permissão de envio
   useEffect(() => {
     if (!active || !user) return;
     backend.listMessages(user.id, active).then((m) => { setMsgs(m); });
+    backend.markConversationRead(user.id, active).catch(() => {});
+    const conv = convs.find((c) => c.id === active);
+    if (conv?.otherUserId) backend.canMessage(user.id, conv.otherUserId).then(setAllowed).catch(() => setAllowed(true));
+    else setAllowed(true);
     const unsub = backend.onChatMessage(active, (m) => {
       setMsgs((xs) => (xs.some((x) => x.id === m.id) ? xs : [...xs, m]));
+      backend.markConversationRead(user.id, active).catch(() => {});
     });
     return unsub;
-  }, [active, user?.id]);
+  }, [active, user?.id, convs]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [msgs, active]);
   useEffect(() => { if (active) inputRef.current?.focus(); }, [active]);
@@ -98,10 +107,12 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
               <span className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold text-[#f7f0e2]" style={{ background: activeConv.otherUserColor || '#6e1f2b' }}>
                 {(activeConv.otherUserName || '?')[0]}
               </span>
-              <div>
+              <div className="flex-1">
                 <p className="text-[13.5px] font-semibold text-ink">{activeConv.otherUserName}</p>
                 <p className="text-[11px] text-faint">{activeConv.otherUserOnline ? '🟢 online agora' : '⚪ offline'}</p>
               </div>
+              <button title="Bloquear" className="rounded p-1.5 text-faint hover:bg-wine-light hover:text-wine" onClick={async () => { if (user && activeConv.otherUserId) { await backend.blockUser(user.id, activeConv.otherUserId); setAllowed(false); } }}><ShieldBan size={15} /></button>
+              <button title="Denunciar" className="rounded p-1.5 text-faint hover:bg-wine-light hover:text-wine" onClick={async () => { if (user && activeConv.otherUserId) await backend.reportContent(user.id, 'comment', activeConv.otherUserId, 'mensagem inadequada'); }}><Flag size={15} /></button>
             </div>
             <div className="chat-scroll min-h-0 flex-1 space-y-2 p-3 md:p-4">
               {msgs.length === 0 && <p className="py-8 text-center text-[12.5px] text-mute">Diga olá 👋 — o histórico fica salvo.</p>}
@@ -115,6 +126,9 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
               ))}
               <div ref={endRef} />
             </div>
+            {!allowed ? (
+              <p className="shrink-0 border-t border-line p-3 text-[12.5px] text-mute">Esta pessoa não aceita mensagens no momento (privacidade ou bloqueio).</p>
+            ) : (
             <form onSubmit={send} className="shrink-0 border-t border-line p-2.5 pb-[max(10px,env(safe-area-inset-bottom))] md:p-3">
               <div className="flex gap-2">
                 <input
@@ -130,6 +144,7 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
                 </button>
               </div>
             </form>
+            )}
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center p-8 text-center text-[13px] text-mute">

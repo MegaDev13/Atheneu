@@ -31,6 +31,8 @@ export interface Profile {
   onboarded: boolean;
   prefs: Prefs;
   privacy: Privacy;
+  privacySocial?: any;
+  notifyPrefs?: any;
   createdAt: number;
 }
 
