@@ -1,0 +1,37 @@
+{
+  "name": "atheneu",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Atheneu — biblioteca digital pessoal: leitura, audiobook, conhecimento e comunidade.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "smoke": "esbuild scripts/smoke.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/smoke.cjs --external:epubjs --external:jszip \"--external:pdfjs-dist\" \"--external:*?url\" \"--define:import.meta.env={\\\"VITE_SUPABASE_URL\\\":\\\"\\\",\\\"VITE_SUPABASE_ANON_KEY\\\":\\\"\\\",\\\"VITE_AI_ENDPOINT\\\":\\\"\\\"}\" && node node_modules/.cache/smoke.cjs",
+    "worker:build": "esbuild workers/windows/worker.ts --bundle --platform=node --format=cjs --outfile=workers/windows/dist/worker.cjs",
+    "worker": "node workers/windows/dist/worker.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "epubjs": "^0.3.93",
+    "framer-motion": "^11.11.0",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.446.0",
+    "pdfjs-dist": "^4.10.38",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.10",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "typescript": "~5.5.4",
+    "vite": "^5.4.8"
+  }
+}

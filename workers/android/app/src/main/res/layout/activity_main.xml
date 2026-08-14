@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:padding="20dp" android:background="#f5f0e6">
+
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Atheneu Worker" android:textSize="26sp" android:textStyle="bold"
+            android:textColor="#241e15" android:fontFamily="serif" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Seu celular como gerador de audiobooks" android:textSize="13sp"
+            android:textColor="#6b5f4d" android:layout_marginBottom="16dp" />
+
+        <EditText android:id="@+id/url" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="URL do Supabase (https://xxxx.supabase.co)" android:inputType="textUri" />
+        <EditText android:id="@+id/anon" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="Chave pública (anon key)" android:inputType="text" />
+        <EditText android:id="@+id/email" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="E-mail da sua conta" android:inputType="textEmailAddress" />
+        <EditText android:id="@+id/password" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="Senha" android:inputType="textPassword" />
+
+        <CheckBox android:id="@+id/onlyWifi" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Processar somente em Wi-Fi" android:checked="true" />
+        <CheckBox android:id="@+id/onlyCharging" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Processar somente conectado ao carregador" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginTop="12dp">
+            <Button android:id="@+id/start" android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="Iniciar Worker" />
+            <Button android:id="@+id/stop" android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="Parar" android:layout_marginStart="8dp" />
+        </LinearLayout>
+
+        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="20dp" android:textSize="14sp" android:textColor="#241e15"
+            android:text="⚪ Worker parado." android:lineSpacingExtra="4dp" />
+    </LinearLayout>
+</ScrollView>

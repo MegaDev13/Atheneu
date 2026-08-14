@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Atheneu — redirecionando…</title>
+  </head>
+  <body>
+    <script type="text/javascript">
+      // SPA no GitHub Pages: converte qualquer rota profunda em um carregamento
+      // da raiz do site, guardando o destino em sessionStorage. O main.tsx
+      // restaura a rota antes de o React Router inicializar.
+      //
+      // pathSegmentsToKeep = 1 para páginas de projeto (usuario.github.io/repositorio/).
+      // Se publicar na raiz (usuario.github.io), mude para 0.
+      var keep = 1;
+      var l = window.location;
+      var segs = l.pathname.split('/').filter(Boolean);
+      var kept = segs.slice(0, keep);
+      var base = kept.length ? '/' + kept.join('/') + '/' : '/';
+      var rest = segs.slice(keep).join('/');
+      try {
+        sessionStorage.setItem('atheneu-redirect', base + rest + l.search + l.hash);
+      } catch (e) {}
+      l.replace(l.origin + base);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "supabaseUrl": "https://SEU-PROJETO.supabase.co",
+  "supabaseAnonKey": "SUA-ANON-KEY-PUBLICA",
+  "deviceName": "Desktop",
+  "pollSeconds": 10,
+  "heartbeatSeconds": 30,
+  "convertToMp3": true,
+  "engines": {
+    "kokoro": {
+      "model": "modelos/kokoro-v1.0.onnx",
+      "voices": "modelos/voices-v1.0.bin",
+      "voice": "pf_dora",
+      "lang": "pt-br"
+    },
+    "piper": {
+      "cmd": "piper",
+      "model": "modelos/pt_BR-faber-medium.onnx"
+    }
+  }
+}

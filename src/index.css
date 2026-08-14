@@ -1,0 +1,177 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Identidade Atheneu ────────────────────────────────────────────────
+   Clara: marfim, papel, tinta, vinho, verde profundo, dourado discreto.
+   Escura: biblioteca noturna — fundo âmbar profundo, luz de leitura quente. */
+:root {
+  --bg: #f2ecdf;
+  --paper: #f7f2e7;
+  --card: #fbf8f1;
+  --card2: #f0e9da;
+  --ink: #241e15;
+  --ink-soft: #6b5f4d;
+  --ink-faint: #94856d;
+  --line: rgba(78, 60, 36, 0.16);
+  --wine: #7c2e3a;
+  --wine-light: rgba(124, 46, 58, 0.09);
+  --pine: #1e4d44;
+  --gold: #a2814a;
+  --glow: rgba(162, 129, 74, 0.14);
+  --hl-yellow: rgba(224, 186, 84, 0.45);
+  --hl-blue: rgba(84, 132, 190, 0.32);
+  --hl-green: rgba(74, 150, 108, 0.32);
+  --hl-red: rgba(196, 84, 78, 0.3);
+}
+
+.dark {
+  --bg: #14100c;
+  --paper: #171310;
+  --card: #1e1915;
+  --card2: #262019;
+  --ink: #e9dfc9;
+  --ink-soft: #a89877;
+  --ink-faint: #7a6c55;
+  --line: rgba(222, 196, 150, 0.13);
+  --wine: #c25e63;
+  --wine-light: rgba(194, 94, 99, 0.14);
+  --pine: #5a9a8c;
+  --gold: #c9a96a;
+  --glow: rgba(201, 169, 106, 0.07);
+  --hl-yellow: rgba(224, 186, 84, 0.28);
+  --hl-blue: rgba(120, 168, 220, 0.3);
+  --hl-green: rgba(110, 190, 145, 0.28);
+  --hl-red: rgba(226, 120, 112, 0.3);
+}
+
+* { border-color: var(--line); }
+
+html { scroll-behavior: smooth; }
+
+body {
+  @apply bg-bg text-ink font-sans antialiased;
+  transition: background-color 0.45s ease, color 0.45s ease;
+}
+
+/* Luz ambiente de biblioteca à noite */
+.dark body {
+  background-image:
+    radial-gradient(900px 500px at 85% -10%, rgba(201, 169, 106, 0.08), transparent 60%),
+    radial-gradient(700px 420px at 8% 110%, rgba(124, 46, 58, 0.12), transparent 55%);
+  background-attachment: fixed;
+}
+body {
+  background-image:
+    radial-gradient(1000px 520px at 88% -12%, rgba(162, 129, 74, 0.1), transparent 60%),
+    radial-gradient(800px 480px at 5% 112%, rgba(30, 77, 68, 0.07), transparent 55%);
+  background-attachment: fixed;
+}
+
+::selection { background: var(--wine); color: #f7f0e2; }
+
+/* Foco visível e acessível */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Barras de rolagem discretas */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink-faint) 45%, transparent); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ─── Componentes utilitários ─── */
+.card {
+  @apply rounded-2xl border border-line bg-card shadow-card;
+}
+
+.glass {
+  @apply border border-line backdrop-blur-md;
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+}
+
+.hairline { height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent); }
+
+.smallcaps {
+  @apply font-sans text-[11px] font-semibold uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+
+.goldline {
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  height: 1px;
+  opacity: 0.55;
+}
+
+.noise::after {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+.dropcap::first-letter {
+  font-family: Fraunces, Georgia, serif;
+  float: left;
+  font-size: 3.4em;
+  line-height: 0.82;
+  padding-right: 0.09em;
+  padding-top: 0.06em;
+  color: var(--wine);
+}
+
+.hl-yellow { background: var(--hl-yellow); border-radius: 2px; box-decoration-break: clone; }
+.hl-blue { background: var(--hl-blue); border-radius: 2px; box-decoration-break: clone; }
+.hl-green { background: var(--hl-green); border-radius: 2px; box-decoration-break: clone; }
+.hl-red { background: var(--hl-red); border-radius: 2px; box-decoration-break: clone; }
+
+/* Estante */
+.shelf-board {
+  height: 14px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #7a5b3a 0%, #5d4126 45%, #3e2a17 100%);
+  box-shadow: 0 10px 18px -8px rgba(30, 18, 6, 0.55), inset 0 1px 0 rgba(255, 235, 200, 0.25);
+}
+.dark .shelf-board {
+  background: linear-gradient(180deg, #4a3823 0%, #372817 45%, #241a0e 100%);
+  box-shadow: 0 12px 22px -8px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 220, 170, 0.12);
+}
+
+.skeleton {
+  @apply rounded-lg;
+  background: linear-gradient(90deg, var(--card2) 25%, var(--card) 50%, var(--card2) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+input[type='range'] { accent-color: var(--wine); }
+
+/* Transições de tema suaves em elementos-chave */
+.card, .glass, header, nav, aside { transition: background-color 0.45s ease, border-color 0.45s ease; }
+
+/* Keyframes declarados em CSS puro para uso via estilos inline (landing, partículas) */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(0.6deg); }
+}
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes glowpulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
