@@ -151,6 +151,31 @@ export default function PdfViewer({ book, dark }: { book: Book; dark?: boolean }
   const [flashId, setFlashId] = useState<string | null>(null);
   const [printed, setPrinted] = useState<number | null>(null);
   const [sessionSummary, setSessionSummary] = useState<any>(null);
+  const [chrome, setChrome] = useState(false); // modo imersivo (toque p/ ocultar UI)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches);
+  const tapRef = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const fn = () => setIsMobile(mq.matches);
+    mq.addEventListener('change', fn);
+    return () => mq.removeEventListener('change', fn);
+  }, []);
+
+  // toque simples (sem arraste) alterna a UI — sensação de app de leitura
+  function tapDown(e: React.PointerEvent) {
+    tapRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+  }
+  function tapUp(e: React.MouseEvent) {
+    const t = tapRef.current;
+    tapRef.current = null;
+    if (!t || tool === 'mark') return;
+    if (Math.hypot(e.clientX - t.x, e.clientY - t.y) < 8 && Date.now() - t.t < 350) {
+      // não esconde a UI se o toque foi numa marcação/controle
+      if ((e.target as HTMLElement).closest('[data-anno],button,input,select,a,.textLayer')) return;
+      setChrome((c) => !c);
+    }
+  }
 
   const wrapRefs = useRef(new Map<number, HTMLDivElement>());
   const dragSel = useRef<{ x: number; y: number; page: number } | null>(null);
@@ -472,7 +497,9 @@ export default function PdfViewer({ book, dark }: { book: Book; dark?: boolean }
   const fg = dark ? '#e9dfc9' : '#241e15';
   const pct = total ? (pageNo / total) * 100 : 0;
   const annCount = anns.length;
-  const baseWidth = viewMode === 'vertical' ? vWidth : Math.min(940, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 90) * (scalePct / 100);
+  const baseWidth = viewMode === 'vertical'
+    ? vWidth
+    : Math.min(940, (typeof window !== 'undefined' ? window.innerWidth : 1200) - (isMobile ? 20 : 90)) * (scalePct / 100);
 
   const overlayProps = { tool, anns, flashId, textLayer: true };
   const onOverlayFn = (e: React.MouseEvent, wrap: HTMLDivElement) => handleOverlay(e, wrap);
@@ -480,7 +507,7 @@ export default function PdfViewer({ book, dark }: { book: Book; dark?: boolean }
   return (
     <div className="flex h-[calc(100vh-60px)] flex-col" style={{ background: bg, color: fg }} onPointerDown={pointerDown}>
       {/* ─── toolbar (§22) ─── */}
-      <div className="flex flex-wrap items-center gap-1 border-b px-3 py-2" style={{ borderColor: 'color-mix(in srgb, currentColor 14%, transparent)' }}>
+      <div className={`${chrome ? 'hidden' : 'flex'} flex-wrap items-center gap-1 overflow-x-auto border-b px-3 py-2`} style={{ borderColor: 'color-mix(in srgb, currentColor 14%, transparent)' }}>
         <button onClick={() => nav('/app/biblioteca')} aria-label="Voltar à biblioteca" className="rounded-lg p-2 opacity-70 hover:opacity-100"><ArrowLeft size={17} /></button>
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[15px]">{book.title}</p>
@@ -524,7 +551,7 @@ export default function PdfViewer({ book, dark }: { book: Book; dark?: boolean }
       </div>
 
       {/* selo modo marca-texto (§62) */}
-      {tool === 'mark' && (
+      {tool === 'mark' && !chrome && (
         <div className="pointer-events-none absolute left-1/2 top-16 z-30 -translate-x-1/2">
           <MarkModeBanner onExit={() => setTool('nav')} />
         </div>
@@ -550,7 +577,7 @@ export default function PdfViewer({ book, dark }: { book: Book; dark?: boolean }
           </div>
         </div>
       ) : viewMode === 'flip' ? (
-        <div className="relative flex flex-1 items-center justify-center overflow-hidden select-none" onPointerDown={flipDown} style={{ perspective: 1800 }}>
+        <div className="relative flex flex-1 items-center justify-center overflow-hidden select-none" onPointerDown={(e) => { flipDown(e); tapDown(e); }} onClick={tapUp} style={{ perspective: 1800 }}>
           {/* página de baixo (destino) */}
           <div className="absolute" style={{ opacity: flip ? 1 : 0 }}>
             {flip && (
@@ -581,7 +608,7 @@ export default function PdfViewer({ book, dark }: { book: Book; dark?: boolean }
           )}
         </div>
       ) : (
-        <div className="flex flex-1 items-start justify-center overflow-auto py-6">
+        <div className="flex flex-1 items-start justify-center overflow-auto py-4 md:py-6" onPointerDown={tapDown} onClick={tapUp}>
           <PageCanvas
             doc={doc} pageNo={pageNo} width={baseWidth} {...overlayProps}
             overlayRef={(el) => { if (el) wrapRefs.current.set(pageNo, el); }}
@@ -591,7 +618,7 @@ export default function PdfViewer({ book, dark }: { book: Book; dark?: boolean }
       )}
 
       {/* ─── barra inferior (§48) ─── */}
-      <div className="flex items-center justify-between gap-2 border-t px-3 py-2" style={{ borderColor: 'color-mix(in srgb, currentColor 14%, transparent)' }}>
+      <div className={`${chrome ? 'hidden' : 'flex'} items-center justify-between gap-2 border-t px-3 py-2`} style={{ borderColor: 'color-mix(in srgb, currentColor 14%, transparent)' }}>
         <div className="flex items-center gap-1">
           <button onClick={() => goTo(pageNo - 1)} disabled={pageNo <= 1} className="rounded-lg px-2.5 py-1.5 text-[12.5px] opacity-80 hover:opacity-100 disabled:opacity-30">◀ Anterior</button>
           <button onClick={() => goTo(pageNo + 1)} disabled={pageNo >= total} className="rounded-lg px-2.5 py-1.5 text-[12.5px] opacity-80 hover:opacity-100 disabled:opacity-30">Próxima ▶</button>

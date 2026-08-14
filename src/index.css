@@ -175,3 +175,29 @@ input[type='range'] { accent-color: var(--wine); }
     scroll-behavior: auto !important;
   }
 }
+
+/* ─── Camada de texto do PDF: alinhada ao canvas, invisível, selecionável ───
+   Garante que a seleção/marcação caia EXATAMENTE sobre o texto visível
+   (evita "texto por baixo" desalinhado). */
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 1;
+  line-height: 1;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.textLayer :is(span, br) {
+  position: absolute;
+  transform-origin: 0 0;
+  white-space: pre;
+  color: transparent;   /* nunca mostra "texto por baixo" */
+  background: transparent;
+}
+.textLayer span {
+  transform: scale(var(--scale-x, 1), var(--scale-y, 1));
+}
+.textLayer ::selection {
+  background: rgba(162, 129, 74, 0.45);
+}

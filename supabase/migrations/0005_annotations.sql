@@ -28,11 +28,13 @@ create index if not exists pdf_ann_user_book_idx
 create index if not exists pdf_ann_book_idx
   on pdf_annotations (book_id);
 
+drop trigger if exists pdf_annotations_updated_at on pdf_annotations;
 create trigger pdf_annotations_updated_at before update on pdf_annotations
   for each row execute function set_updated_at();
 
 alter table pdf_annotations enable row level security;
 
+drop policy if exists "anotações: próprio" on pdf_annotations;
 create policy "anotações: próprio" on pdf_annotations
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
