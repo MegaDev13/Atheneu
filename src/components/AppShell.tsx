@@ -145,13 +145,15 @@ export default function AppShell() {
   const [demoNotice, setDemoNotice] = useState(() => !localStorage.getItem('atheneu-demo-dismissed'));
   const [unread, setUnread] = useState(0);
 
-  // contador de mensagens não lidas (atualiza sem recarregar)
+  // contador de mensagens não lidas (atualiza sem recarregar + ao ler)
   useEffect(() => {
     if (!user) return;
     const load = () => backend.getUnreadCount(user.id).then(setUnread).catch(() => {});
     load();
     const t = setInterval(load, 15_000);
-    return () => clearInterval(t);
+    const onRead = () => load();
+    window.addEventListener('atheneu:messages-read', onRead);
+    return () => { clearInterval(t); window.removeEventListener('atheneu:messages-read', onRead); };
   }, [user?.id]);
 
   // Presença: heartbeat de "estou online" (independente de qualquer outra ação)

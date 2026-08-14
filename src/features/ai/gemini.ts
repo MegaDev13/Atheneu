@@ -2,7 +2,7 @@
 // A arquitetura permite trocar de modelo/provedor sem alterar o restante do
 // sistema: basta implementar `AIProvider` e registrar em `getAIProvider`.
 
-import { AI_CONFIG, AI_PROXY_ENDPOINT, GEMINI_API_KEY } from './config';
+import { AI_CONFIG, AI_PROXY_ENDPOINT, effectiveGeminiKey } from './config';
 
 export interface AIProvider {
   name: string;
@@ -18,7 +18,7 @@ export class GeminiProvider implements AIProvider {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': GEMINI_API_KEY,
+        'x-goog-api-key': effectiveGeminiKey(),
       },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],

@@ -44,14 +44,15 @@ export default function ChatPanel({ activeDm, onConsumedDm, initialConversation 
   // Carrega histórico + realtime + marca como lida + verifica permissão de envio
   useEffect(() => {
     if (!active || !user) return;
+    const ping = () => window.dispatchEvent(new Event('atheneu:messages-read'));
     backend.listMessages(user.id, active).then((m) => { setMsgs(m); });
-    backend.markConversationRead(user.id, active).catch(() => {});
+    backend.markConversationRead(user.id, active).then(ping).catch(() => {});
     const conv = convs.find((c) => c.id === active);
     if (conv?.otherUserId) backend.canMessage(user.id, conv.otherUserId).then(setAllowed).catch(() => setAllowed(true));
     else setAllowed(true);
     const unsub = backend.onChatMessage(active, (m) => {
       setMsgs((xs) => (xs.some((x) => x.id === m.id) ? xs : [...xs, m]));
-      backend.markConversationRead(user.id, active).catch(() => {});
+      backend.markConversationRead(user.id, active).then(ping).catch(() => {});
     });
     return unsub;
   }, [active, user?.id, convs]);

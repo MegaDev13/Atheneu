@@ -7,7 +7,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../contexts/ToastContext';
 import { Button, Card, Field, Input, Select } from '../components/ui';
 import { computeStats } from '../lib/stats';
-import { aiAvailable, AI_CONFIG } from '../features/ai/config';
+import { aiAvailable, AI_CONFIG, getUserGeminiKey, setUserGeminiKey, usingUserKey } from '../features/ai/config';
 import type { Book, Note, ReadingSession, Visibility } from '../lib/types';
 
 const AVATAR_COLORS = ['#6e1f2b', '#1e4d44', '#26364f', '#5a4630', '#3d3550', '#743e2a', '#374a3a', '#5c2438'];
@@ -180,6 +180,7 @@ export default function Profile() {
             <div><p className="text-[14px] font-medium text-ink">Sessão</p><p className="text-[12.5px] text-mute">{user?.email}</p></div>
             <Button variant="danger" onClick={async () => { await signOut(); nav('/'); }}><LogOut size={15} /> Sair</Button>
           </Card>
+          <GeminiKeyEditor />
           <Card className="p-6 md:col-span-2">
             <p className="smallcaps mb-4 flex items-center gap-1.5"><Sparkles size={13} /> uso da IA</p>
             {aiAvailable() ? (
@@ -301,6 +302,49 @@ function PrivacyPanel() {
       )}
 
       <div className="mt-5 flex justify-end"><Button onClick={save} loading={saving}>Salvar privacidade</Button></div>
+    </Card>
+  );
+}
+
+// ─── Chave do Google AI Studio do próprio usuário ───
+function GeminiKeyEditor() {
+  const { toast } = useToast();
+  const [key, setKey] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => { setKey(getUserGeminiKey()); setSaved(Boolean(getUserGeminiKey())); }, []);
+
+  async function test() {
+    if (!key.trim()) { toast('Cole uma chave para testar.', 'info'); return; }
+    setTesting(true);
+    try {
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models', { headers: { 'x-goog-api-key': key.trim() } });
+      if (res.ok) toast('✅ Chave válida! Sua conta do Google AI Studio está conectada.');
+      else toast(`Chave inválida (HTTP ${res.status}). Verifique no Google AI Studio.`, 'error');
+    } catch {
+      toast('Não foi possível verificar a chave (rede).', 'error');
+    } finally { setTesting(false); }
+  }
+
+  return (
+    <Card className="p-6 md:col-span-2">
+      <p className="smallcaps mb-2 flex items-center gap-1.5"><Sparkles size={13} /> sua chave do Google AI Studio</p>
+      <p className="mb-3 text-[12.5px] leading-relaxed text-mute">
+        Cole aqui a sua chave gratuita do <a className="text-wine underline" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">Google AI Studio</a>.
+        Ela fica salva <strong>somente neste navegador</strong> e passa a gerenciar a IA da sua conta
+        (a IA usa primeiro a sua chave; sem ela, usa a do sistema).
+      </p>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input type="password" value={key} onChange={(e) => { setKey(e.target.value); setSaved(false); }} placeholder="AIza… (sua chave do Google AI Studio)" autoComplete="off" />
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={test} loading={testing}>Testar</Button>
+          <Button onClick={() => { setUserGeminiKey(key); setSaved(true); toast(key.trim() ? 'Chave salva — a IA agora usa a sua conta.' : 'Chave removida.', 'info'); }}>Salvar</Button>
+        </div>
+      </div>
+      <p className="mt-2 text-[11.5px] text-faint">
+        {saved && key.trim() ? '🟢 Usando a SUA chave do Google AI Studio.' : usingUserKey() ? '🟢 Usando a sua chave salva.' : '⚪ Sem chave própria — usando a chave do sistema (se configurada).'}
+      </p>
     </Card>
   );
 }

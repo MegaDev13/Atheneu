@@ -39,7 +39,18 @@ export const AI_OPERATIONS: Record<string, { cacheDays: number; needsContext: bo
 export const GEMINI_API_KEY = (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
 export const AI_PROXY_ENDPOINT = (import.meta.env.VITE_AI_ENDPOINT as string) || '';
 
-// A IA está habilitada quando existe proxy seguro OU chave no cliente.
-// Com chave no cliente, o consumo é controlado por limite diário + rate limit
-// + cache, mas a chave é visível no bundle — limitação documentada (§40).
-export const aiAvailable = () => Boolean(AI_PROXY_ENDPOINT || GEMINI_API_KEY);
+// ─── Chave do Google AI Studio do PRÓPRIO usuário (§ pedido) ───
+// A chave fica no navegador do usuário (localStorage) e gerencia a conta DELE.
+// Prioridade: chave do usuário > chave do ambiente (build).
+const USER_KEY_LS = 'atheneu-gemini-key';
+export const getUserGeminiKey = (): string => {
+  try { return localStorage.getItem(USER_KEY_LS) || ''; } catch { return ''; }
+};
+export const setUserGeminiKey = (k: string) => {
+  try { k.trim() ? localStorage.setItem(USER_KEY_LS, k.trim()) : localStorage.removeItem(USER_KEY_LS); } catch {}
+};
+export const effectiveGeminiKey = (): string => getUserGeminiKey() || GEMINI_API_KEY;
+export const usingUserKey = (): boolean => Boolean(getUserGeminiKey());
+
+// A IA está habilitada quando existe proxy seguro OU chave (do usuário ou do build).
+export const aiAvailable = () => Boolean(AI_PROXY_ENDPOINT || effectiveGeminiKey());
