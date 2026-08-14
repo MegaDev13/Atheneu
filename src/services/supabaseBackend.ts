@@ -498,3 +498,112 @@ Object.assign(supabaseBackend, {
     req({}, error);
   },
 } as any);
+
+// ─── Comunidade: presença + chat (migrations 0002/0006) ───
+const ONLINE_WINDOW = 3 * 60 * 1000;
+
+Object.assign(supabaseBackend, {
+  async listUsers(userId: string): Promise<import('../lib/types').CommunityUser[]> {
+    const { data, error } = await supabase!.from('public_users').select('*');
+    req(data, error);
+    const now = Date.now();
+    return (data as any[]).map((u) => ({
+      id: u.id, name: u.name || 'Leitor(a)', color: u.avatar_color || '#6e1f2b', bio: u.bio || '',
+      lastSeen: new Date(u.last_seen).getTime(),
+      online: now - new Date(u.last_seen).getTime() < ONLINE_WINDOW,
+      isSelf: u.id === userId,
+      totalBooks: u.total_books || 0, readingNow: u.reading_now || 0,
+    })).sort((a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name, 'pt'));
+  },
+
+  async sendHeartbeat(userId: string) {
+    await supabase!.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', userId);
+  },
+
+  async listConversations(userId: string): Promise<import('../lib/types').Conversation[]> {
+    const { data: members, error } = await supabase!.from('conversation_members')
+      .select('conversation_id').eq('user_id', userId);
+    req(members, error);
+    const ids = (members || []).map((m: any) => m.conversation_id);
+    if (ids.length === 0) return [];
+    const { data: convs, error: e2 } = await supabase!.from('conversations')
+      .select('id, kind').in('id', ids).eq('kind', 'dm');
+    req(convs, e2);
+    const { data: allMembers, error: e3 } = await supabase!.from('conversation_members')
+      .select('conversation_id, user_id').in('conversation_id', ids);
+    req(allMembers, e3);
+    const { data: users, error: e4 } = await supabase!.from('public_users').select('id, name, avatar_color, last_seen');
+    req(users, e4);
+    const uMap = new Map((users as any[]).map((u) => [u.id, u]));
+    const now = Date.now();
+    const out: import('../lib/types').Conversation[] = [];
+    for (const c of convs as any[]) {
+      const otherId = (allMembers as any[]).find((m) => m.conversation_id === c.id && m.user_id !== userId)?.user_id;
+      const other = otherId ? uMap.get(otherId) : null;
+      const { data: last } = await supabase!.from('messages')
+        .select('text, created_at').eq('conversation_id', c.id)
+        .order('created_at', { ascending: false }).limit(1);
+      out.push({
+        id: c.id, kind: 'dm', otherUserId: otherId || null,
+        otherUserName: other?.name || 'Leitor(a)',
+        otherUserColor: other?.avatar_color || '#6e1f2b',
+        otherUserOnline: other ? now - new Date(other.last_seen).getTime() < ONLINE_WINDOW : false,
+        lastMessage: last?.[0]?.text, lastAt: last?.[0] ? new Date(last[0].created_at).getTime() : undefined,
+      });
+    }
+    return out.sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0));
+  },
+
+  async openDm(userId: string, otherId: string): Promise<import('../lib/types').Conversation[]> {
+    // procura DM existente entre os dois
+    const { data: mine } = await supabase!.from('conversation_members').select('conversation_id').eq('user_id', userId);
+    const ids = (mine || []).map((m: any) => m.conversation_id);
+    let convId: string | null = null;
+    if (ids.length) {
+      const { data: theirs } = await supabase!.from('conversation_members')
+        .select('conversation_id').eq('user_id', otherId).in('conversation_id', ids);
+      convId = theirs?.[0]?.conversation_id || null;
+    }
+    if (!convId) {
+      const { data: created, error } = await supabase!.from('conversations')
+        .insert({ kind: 'dm' }).select().single();
+      req(created, error);
+      convId = created.id;
+      const { error: em } = await supabase!.from('conversation_members')
+        .insert([{ conversation_id: convId, user_id: userId }, { conversation_id: convId, user_id: otherId }]);
+      req({}, em);
+    }
+    return (supabaseBackend as any).listConversations(userId);
+  },
+
+  async listMessages(userId: string, conversationId: string): Promise<import('../lib/types').ChatMessage[]> {
+    const { data, error } = await supabase!.from('messages')
+      .select('*').eq('conversation_id', conversationId).order('created_at', { ascending: true }).limit(300);
+    req(data, error);
+    return (data as any[]).map((m) => ({
+      id: m.id, conversationId: m.conversation_id, userId: m.user_id, text: m.text,
+      at: new Date(m.created_at).getTime(),
+    }));
+  },
+
+  async sendMessage(userId: string, conversationId: string, text: string): Promise<import('../lib/types').ChatMessage[]> {
+    const { data, error } = await supabase!.from('messages')
+      .insert({ conversation_id: conversationId, user_id: userId, text })
+      .select().single();
+    req(data, error);
+    return {
+      id: data.id, conversationId, userId, text: data.text, at: new Date(data.created_at).getTime(),
+    } as any;
+  },
+
+  onChatMessage(conversationId: string, cb: (m: import('../lib/types').ChatMessage) => void) {
+    const ch = supabase!.channel('msg-' + conversationId)
+      .on('postgres_changes' as any, { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+        (payload: any) => {
+          const m = payload.new;
+          cb({ id: m.id, conversationId: m.conversation_id, userId: m.user_id, text: m.text, at: new Date(m.created_at).getTime() });
+        })
+      .subscribe();
+    return () => { supabase!.removeChannel(ch); };
+  },
+} as any);

@@ -13,6 +13,9 @@ import type {
   AudioProgress,
   Book,
   Chapter,
+  ChatMessage,
+  CommunityUser,
+  Conversation,
   Goal,
   Highlight,
   Note,
@@ -107,4 +110,13 @@ export interface Backend {
   listAnnotations(userId: string, bookId?: string): Promise<PdfAnnotation[]>;
   saveAnnotation(userId: string, a: PdfAnnotation): Promise<void>;
   deleteAnnotation(userId: string, id: string): Promise<void>;
+
+  // ─── Comunidade: usuários reais, presença e chat ───
+  listUsers(userId: string): Promise<CommunityUser[]>;
+  sendHeartbeat(userId: string): Promise<void>;
+  listConversations(userId: string): Promise<Conversation[]>;
+  openDm(userId: string, otherId: string): Promise<Conversation[]>;
+  listMessages(userId: string, conversationId: string): Promise<ChatMessage[]>;
+  sendMessage(userId: string, conversationId: string, text: string): Promise<ChatMessage>;
+  onChatMessage(conversationId: string, cb: (m: ChatMessage) => void): () => void;
 }

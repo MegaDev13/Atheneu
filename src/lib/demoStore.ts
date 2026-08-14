@@ -52,6 +52,7 @@ export interface DemoDB {
   aiCache: { hash: string; operation: string; response: string; model: string; createdAt: number; expiresAt: number }[];
   aiLog: { operation: string; hash: string | null; model: string; status: string; tokensEstimated: number; at: number }[];
   annotations: any[];
+  chat: { conversations: any[]; messages: any[] };
 }
 
 export interface DemoWorker {
@@ -221,6 +222,7 @@ function seedDB(): DemoDB {
     aiCache: [],
     aiLog: [],
     annotations: [],
+    chat: { conversations: [], messages: [] },
   };
 }
 

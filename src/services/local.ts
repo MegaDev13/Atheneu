@@ -408,10 +408,17 @@ export const localBackend: Backend = {
     return this.aiCountToday('');
   },
 
-  // preenchidos via Object.assign no fim do arquivo (camada de anotações)
+  // preenchidos via Object.assign no fim do arquivo (anotações + comunidade)
   listAnnotations: undefined as any,
   saveAnnotation: undefined as any,
   deleteAnnotation: undefined as any,
+  listUsers: undefined as any,
+  sendHeartbeat: undefined as any,
+  listConversations: undefined as any,
+  openDm: undefined as any,
+  listMessages: undefined as any,
+  sendMessage: undefined as any,
+  onChatMessage: undefined as any,
 };
 
 // ─── Helpers da simulação TTS ───────────────────────────────────────────
@@ -538,5 +545,75 @@ Object.assign(localBackend, {
     const db = loadDB();
     db.annotations = annStore(db).filter((x: any) => x.id !== id);
     saveDB();
+  },
+} as any);
+
+// ─── Comunidade (demo): usuários simulados + presença + chat local ───
+const ONLINE_MS = 3 * 60 * 1000;
+
+Object.assign(localBackend, {
+  async listUsers(userId: string) {
+    const db = loadDB();
+    const now = Date.now();
+    const demo = (DEMO_SOCIAL.people as any[]).map((p, i) => ({
+      id: p.id, name: p.name, color: p.color, bio: p.bio,
+      lastSeen: now - (i === 0 ? 40_000 : i === 1 ? 120_000 : 26 * 3600_000),
+      online: i < 2, isSelf: false, totalBooks: 12 + i * 7, readingNow: i % 3,
+    }));
+    const me = db.profile ? [{
+      id: db.profile.id, name: db.profile.name, color: db.profile.color, bio: db.profile.bio,
+      lastSeen: now, online: true, isSelf: true,
+      totalBooks: db.books.length, readingNow: db.books.filter((b: any) => b.status === 'reading').length,
+    }] : [];
+    return [...me, ...demo].sort((a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name, 'pt'));
+  },
+  async sendHeartbeat() { /* demo: sempre online */ },
+  async listConversations(userId: string) {
+    const db = loadDB();
+    if (!db.chat) db.chat = { conversations: [], messages: [] };
+    const users = await (localBackend as any).listUsers(userId);
+    return (db.chat.conversations as any[]).map((c: any) => {
+      const other = users.find((u: any) => u.id === c.otherUserId);
+      const last = (db.chat.messages as any[]).filter((m: any) => m.conversationId === c.id).slice(-1)[0];
+      return { id: c.id, kind: 'dm', otherUserId: c.otherUserId, otherUserName: other?.name, otherUserColor: other?.color, otherUserOnline: other?.online, lastMessage: last?.text, lastAt: last?.at };
+    }).sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0));
+  },
+  async openDm(userId: string, otherId: string) {
+    const db = loadDB();
+    if (!db.chat) db.chat = { conversations: [], messages: [] };
+    let c = (db.chat.conversations as any[]).find((x: any) => x.otherUserId === otherId);
+    if (!c) { c = { id: uid(), otherUserId: otherId }; db.chat.conversations.push(c); saveDB(); }
+    return (localBackend as any).listConversations(userId);
+  },
+  async listMessages(userId: string, conversationId: string) {
+    const db = loadDB();
+    if (!db.chat) return [];
+    return (db.chat.messages as any[]).filter((m: any) => m.conversationId === conversationId);
+  },
+  async sendMessage(userId: string, conversationId: string, text: string) {
+    const db = loadDB();
+    if (!db.chat) db.chat = { conversations: [], messages: [] };
+    const m = { id: uid(), conversationId, userId, text, at: Date.now() };
+    db.chat.messages.push(m);
+    saveDB();
+    // demo: a outra pessoa responde uma vez, pra você ver o chat vivo
+    const conv = (db.chat.conversations as any[]).find((c: any) => c.id === conversationId);
+    if (conv && !conv.replied) {
+      conv.replied = true;
+      setTimeout(async () => {
+        const d2 = loadDB();
+        d2.chat.messages.push({ id: uid(), conversationId, userId: conv.otherUserId, text: 'Que bom ter você por aqui! O que você está lendo agora? 📚', at: Date.now() });
+        saveDB();
+      }, 2500);
+    }
+    return m as any;
+  },
+  onChatMessage(conversationId: string, cb: (m: any) => void) {
+    const t = setInterval(async () => {
+      const db = loadDB();
+      const last = (db.chat?.messages as any[])?.filter((m: any) => m.conversationId === conversationId).slice(-1)[0];
+      if (last && last.at > Date.now() - 4000) cb(last);
+    }, 2000);
+    return () => clearInterval(t);
   },
 } as any);

@@ -1,6 +1,7 @@
 # Fatiador/upload da compilação "Filosofia Antiga" para a conta do usuário (privado).
 # Retomável: reusa livros já criados, pula capítulos já inseridos.
-import io, json, re, unicodedata, urllib.request, urllib.parse, uuid
+# Uso: python3 scripts/upload_livros.py [arquivo.pdf] [toc.json]
+import io, json, re, sys, unicodedata, urllib.request, urllib.parse, uuid
 from pypdf import PdfReader, PdfWriter
 
 env = dict(l.split('=', 1) for l in open('.env') if '=' in l)
@@ -40,6 +41,9 @@ TOC = [
     (1256, "Platão", "Sofista"), (1329, "Platão", "Político"), (1390, "Platão", "Filebo"), (1447, "Platão", "Timeu"),
     (1533, "Platão", "Crítias"), (1546, "Platão", "Leis"),
 ]
+PDF_FILE = sys.argv[1] if len(sys.argv) > 1 else "uploads/FILOSOFIA_ANTIGA_PRE_SOCRATICOS_SOCRATES_PLATAO.pdf"
+if len(sys.argv) > 2:
+    TOC = [tuple(x) for x in json.load(open(sys.argv[2]))]
 TOTAL = 1851
 
 def slug(s):
@@ -47,7 +51,8 @@ def slug(s):
     s = re.sub(r'[\u0300-\u036f]', '', s)
     return re.sub(r'[^a-z0-9]+', '-', s).strip('-')
 
-reader = PdfReader("uploads/FILOSOFIA_ANTIGA_PRE_SOCRATICOS_SOCRATES_PLATAO.pdf")
+reader = PdfReader(PDF_FILE)
+TOTAL = len(reader.pages)
 ok = 0
 for i, (start, autor, obra) in enumerate(TOC):
     end = TOC[i + 1][0] - 1 if i + 1 < len(TOC) else TOTAL

@@ -345,6 +345,38 @@ export function autoAnnotationName(text: string | null, page: number, max = 48):
 export type ViewMode = 'lateral' | 'flip' | 'vertical';
 export type ReaderTool = 'nav' | 'mark';
 
+// ─── Comunidade: usuários reais + presença + chat ────────────────────────
+export interface CommunityUser {
+  id: string;
+  name: string;
+  color: string;
+  bio: string;
+  lastSeen: number;
+  online: boolean;
+  isSelf: boolean;
+  totalBooks: number;
+  readingNow: number;
+}
+
+export interface Conversation {
+  id: string;
+  kind: 'dm';
+  otherUserId: string | null;
+  otherUserName?: string;
+  otherUserColor?: string;
+  otherUserOnline?: boolean;
+  lastMessage?: string;
+  lastAt?: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  userId: string;
+  text: string;
+  at: number;
+}
+
 export interface SocialBundle {
   people: Person[];
   following: string[];

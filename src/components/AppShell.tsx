@@ -140,6 +140,14 @@ export default function AppShell() {
   const location = useLocation();
   const [demoNotice, setDemoNotice] = useState(() => !localStorage.getItem('atheneu-demo-dismissed'));
 
+  // Presença: heartbeat de "estou online" (independente de qualquer outra ação)
+  useEffect(() => {
+    if (!user) return;
+    backend.sendHeartbeat(user.id).catch(() => {});
+    const t = setInterval(() => backend.sendHeartbeat(user.id).catch(() => {}), 60_000);
+    return () => clearInterval(t);
+  }, [user?.id]);
+
   return (
     <div className="flex min-h-screen">
       {/* Sidebar desktop */}

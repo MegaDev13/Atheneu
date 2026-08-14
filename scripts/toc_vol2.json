@@ -1,0 +1,16 @@
+[
+  [4, "Aristóteles", "Categorias"], [21, "Aristóteles", "Da Interpretação"], [34, "Aristóteles", "Analíticos Anteriores"],
+  [85, "Aristóteles", "Analíticos Posteriores"], [123, "Aristóteles", "Tópicos"], [198, "Aristóteles", "Refutações Sofísticas"],
+  [224, "Aristóteles", "Física"], [315, "Aristóteles", "Do Céu"], [359, "Aristóteles", "Da Geração e Corrupção"],
+  [389, "Aristóteles", "Da Alma"], [425, "Aristóteles", "História dos Animais"], [564, "Aristóteles", "Poética"],
+  [582, "Aristóteles", "Retórica"], [660, "Aristóteles", "Ética a Nicômaco"], [749, "Aristóteles", "Ética a Eudemo"],
+  [843, "Aristóteles", "Política"], [955, "Aristóteles", "Metafísica"], [1060, "Epicuro", "Carta a Meneceu"],
+  [1063, "Epicuro", "Máximas Principais"], [1067, "Epicuro", "Sentenças Vaticanas"], [1071, "Lucrécio", "Da Natureza das Coisas"],
+  [1161, "Diógenes Laércio", "Vidas e Doutrinas dos Filósofos Ilustres"], [1368, "Pirro", "Fragmentos e Testemunhos"],
+  [1378, "Sexto Empírico", "Esboços do Pirronismo"], [1451, "Sexto Empírico", "Contra os Professores"],
+  [1502, "Epicteto", "Manual"], [1599, "Epicteto", "Discursos"], [1746, "Epicteto", "Fragmentos"],
+  [1808, "Sêneca", "Sobre a Brevidade da Vida"], [1821, "Sêneca", "Da Vida Feliz"], [1835, "Sêneca", "Da Tranquilidade da Alma"],
+  [1852, "Sêneca", "Cartas a Lucílio"], [2127, "Sêneca", "Sobre a Ira"], [2169, "Marco Aurélio", "Meditações"],
+  [2217, "Cícero", "Sobre os Deveres"], [2305, "Cícero", "Sobre a República"], [2366, "Cícero", "Sobre as Leis"],
+  [2403, "Cícero", "Tusculanas"]
+]

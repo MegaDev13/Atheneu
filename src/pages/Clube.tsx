@@ -5,8 +5,9 @@ import { AlertTriangle, Heart, Lightbulb, MessageCircle, Users, MessageSquare } 
 import { backend } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { Button, Card, ProgressBar, Skeleton } from '../components/ui';
+import ChatPanel from '../features/social/ChatPanel';
 import { relTime } from '../lib/utils';
-import type { Activity, Book, Progress, SocialBundle } from '../lib/types';
+import type { Activity, Book, CommunityUser, Progress, SocialBundle } from '../lib/types';
 
 const REACTIONS = [
   { icon: '❤️', label: 'amor' },
@@ -24,6 +25,8 @@ export default function Clube() {
   const [books, setBooks] = useState<Book[]>([]);
   const [progress, setProgress] = useState<Progress[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [users, setUsers] = useState<CommunityUser[]>([]);
+  const [dmTarget, setDmTarget] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [reactions, setReactions] = useState<Record<string, string[]>>({}); // id → reações locais
 
@@ -34,9 +37,12 @@ export default function Clube() {
       backend.listBooks(user.id),
       backend.listProgress(user.id),
       backend.listActivities(user.id),
+      backend.listUsers(user.id),
     ])
-      .then(([s, b, p, a]) => { setSocial(s); setBooks(b); setProgress(p); setActivities(a); })
+      .then(([s, b, p, a, u]) => { setSocial(s); setBooks(b); setProgress(p); setActivities(a); setUsers(u); })
       .finally(() => setLoading(false));
+    const t = setInterval(() => backend.listUsers(user.id).then(setUsers).catch(() => {}), 60_000);
+    return () => clearInterval(t);
   }, [user?.id]);
 
   const following = social?.following || [];
@@ -73,7 +79,7 @@ export default function Clube() {
           {tab === 'discussoes' ? (
             <Discussions social={social} books={books} progress={progress} reactions={reactions} setReactions={setReactions} />
           ) : tab === 'chat' ? (
-            <ChatSoon />
+            <ChatPanel activeDm={dmTarget} onConsumedDm={() => { setDmTarget(null); }} />
           ) : (
             <Feed social={social} books={books} activities={activities} />
           )}
@@ -108,22 +114,41 @@ export default function Clube() {
             </ul>
           </Card>
 
-          {/* Descobrir leitores */}
+          {/* Leitores do site: usuários reais + presença online (§ pedido) */}
           <Card className="p-5">
-            <p className="smallcaps mb-3">descobrir leitores</p>
+            <p className="smallcaps mb-3">leitores do site · {users.filter((u) => u.online).length} online</p>
             <ul className="space-y-3">
-              {social.people.filter((p) => !following.includes(p.id)).map((p) => (
-                <li key={p.id} className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-[#f7f0e2]" style={{ background: p.color }}>{p.name[0]}</span>
+              {users.filter((u) => !u.isSelf).map((u) => (
+                <li key={u.id} className="flex items-center gap-2.5">
+                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-[#f7f0e2]" style={{ background: u.color }}>
+                    {u.name[0]}
+                    <span
+                      title={u.online ? 'online' : `visto ${relTime(u.lastSeen)}`}
+                      className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card ${u.online ? 'bg-pine' : 'bg-faint'}`}
+                    />
+                  </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium text-ink">{p.name}</p>
-                    <p className="truncate text-[11.5px] text-faint">{p.genres.join(' · ')}</p>
+                    <p className="truncate text-[13px] font-medium text-ink">
+                      {u.name} <span className="text-[10.5px] font-normal text-faint">{u.online ? '🟢 online' : '⚪ offline'}</span>
+                    </p>
+                    <p className="truncate text-[11.5px] text-faint">
+                      {u.totalBooks} livro{u.totalBooks === 1 ? '' : 's'} · {u.readingNow} lendo agora
+                    </p>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => toggleFollow(p.id)}>Seguir</Button>
+                  <button
+                    onClick={() => { setDmTarget(u.id); setParams({ t: 'chat' }, { replace: true }); }}
+                    title={`Conversar com ${u.name}`} aria-label={`Conversar com ${u.name}`}
+                    className="rounded-lg p-2 text-mute hover:bg-wine-light hover:text-ink"
+                  >
+                    <MessageSquare size={15} />
+                  </button>
+                  {!following.includes(u.id) && (
+                    <Button size="sm" variant="outline" onClick={() => toggleFollow(u.id)}>Seguir</Button>
+                  )}
                 </li>
               ))}
-              {social.people.filter((p) => !following.includes(p.id)).length === 0 && (
-                <p className="py-3 text-center text-[12.5px] text-faint">Você já segue todo mundo por aqui.</p>
+              {users.filter((u) => !u.isSelf).length === 0 && (
+                <p className="py-3 text-center text-[12.5px] text-faint">Ainda não há outros leitores cadastrados.</p>
               )}
             </ul>
           </Card>
