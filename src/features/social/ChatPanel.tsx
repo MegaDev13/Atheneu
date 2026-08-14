@@ -115,14 +115,15 @@ export default function ChatPanel({ activeDm, onConsumedDm }: { activeDm: string
               ))}
               <div ref={endRef} />
             </div>
-            <form onSubmit={send} className="flex gap-2 border-t border-line p-2.5 md:p-3">
-              <input
-                ref={inputRef}
-                value={text} onChange={(e) => setText(e.target.value)}
-                placeholder="Mensagem…"
-                aria-label="Mensagem"
-                className="h-11 flex-1 rounded-xl border border-line bg-card2/50 px-3.5 text-[14px] text-ink placeholder:text-faint focus:border-gold focus:outline-none"
-              />
+            <form onSubmit={send} className="shrink-0 border-t border-line p-2.5 pb-[max(10px,env(safe-area-inset-bottom))] md:p-3">
+              <div className="flex gap-2">
+                <input
+                  ref={inputRef}
+                  value={text} onChange={(e) => setText(e.target.value)}
+                  placeholder="Mensagem…"
+                  aria-label="Mensagem"
+                  className="h-11 min-w-0 flex-1 rounded-xl border border-line bg-card2/50 px-3.5 text-[14px] text-ink placeholder:text-faint focus:border-gold focus:outline-none"
+                />
                 <button type="submit" disabled={!text.trim()} aria-label="Enviar mensagem"
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-wine text-[#f7f0e2] disabled:opacity-40">
                   <Send size={16} />
