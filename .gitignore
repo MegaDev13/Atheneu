@@ -7,3 +7,6 @@ dist
 .DS_Store
 workers/windows/worker.config.json
 workers/windows/dist/
+.npm/
+.venv-tts/
+uploads/
