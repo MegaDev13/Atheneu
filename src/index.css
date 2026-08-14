@@ -46,7 +46,6 @@
   --sidebar-width: 240px; --sidebar-active: var(--wine-light); --sidebar-active-text: var(--wine);
   --chat-user-bg: var(--wine); --chat-user-text: #f7f0e2; --chat-other-bg: var(--card2); --chat-other-text: var(--ink);
 }
-}
 
 .dark {
   --bg: #14100c;
