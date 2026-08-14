@@ -19,18 +19,28 @@ export default {
         pine: 'var(--pine)',
         gold: 'var(--gold)',
       },
+      // Fontes/radios/sombras apontam para tokens do Theme Engine: qualquer tema
+      // redefine as variáveis e TODOS os componentes existentes mudam junto,
+      // sem reescrever nenhum componente.
       fontFamily: {
-        display: ['Fraunces', 'Georgia', 'Cambria', 'serif'],
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        reader: ['"Source Serif 4"', 'Georgia', 'Cambria', 'serif'],
+        display: 'var(--font-display)',
+        sans: 'var(--font-sans)',
+        reader: 'var(--font-reader)',
+      },
+      borderRadius: {
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+        '2xl': 'var(--radius-xl)',
       },
       maxWidth: {
         prose2: '68ch',
       },
       boxShadow: {
-        card: '0 1px 2px rgba(28,22,14,.05), 0 12px 32px -18px rgba(28,22,14,.28)',
-        deep: '0 2px 6px rgba(15,10,5,.12), 0 28px 60px -24px rgba(15,10,5,.45)',
-        spine: 'inset 3px 0 6px -2px rgba(0,0,0,.35), inset -2px 0 4px -2px rgba(255,255,255,.12)',
+        card: 'var(--shadow-card)',
+        deep: 'var(--shadow-deep)',
+        spine: 'var(--shadow-spine)',
       },
       keyframes: {
         floaty: {

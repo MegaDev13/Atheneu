@@ -19,10 +19,33 @@
   --pine: #1e4d44;
   --gold: #a2814a;
   --glow: rgba(162, 129, 74, 0.14);
+  --success: #2e7d5b;
+  --warning: #b07a1e;
+  --error: #a83232;
   --hl-yellow: rgba(224, 186, 84, 0.45);
   --hl-blue: rgba(84, 132, 190, 0.32);
   --hl-green: rgba(74, 150, 108, 0.32);
   --hl-red: rgba(196, 84, 78, 0.3);
+  /* tokens de forma/sombra/tipo/anim controláveis pelo Theme Engine */
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 20px;
+  --shadow-card: 0 1px 2px rgba(28,22,14,.05), 0 12px 32px -18px rgba(28,22,14,.28);
+  --shadow-deep: 0 2px 6px rgba(15,10,5,.12), 0 28px 60px -24px rgba(15,10,5,.45);
+  --shadow-spine: inset 3px 0 6px -2px rgba(0,0,0,.35), inset -2px 0 4px -2px rgba(255,255,255,.12);
+  --font-display: 'Fraunces', Georgia, Cambria, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-reader: 'Source Serif 4', Georgia, Cambria, serif;
+  --font-size-md: 16px; --line-height: 1.6; --letter-spacing: 0em;
+  --transition-fast: .15s ease; --transition-normal: .3s ease; --transition-slow: .6s ease;
+  --animation-enabled: 1; --animation-duration: 1; --animation-intensity: 1;
+  --glass-blur: 12px; --glass-alpha: .72; --border-width: 1px; --density: 1;
+  /* component tokens */
+  --button-radius: var(--radius-md); --button-shadow: var(--shadow-card);
+  --card-radius: var(--radius-xl); --card-shadow: var(--shadow-card); --card-border: var(--line);
+  --input-radius: var(--radius-md); --input-bg: color-mix(in srgb, var(--card2) 60%, transparent);
+  --sidebar-bg: color-mix(in srgb, var(--paper) 80%, transparent); --sidebar-border: var(--line);
+  --sidebar-width: 240px; --sidebar-active: var(--wine-light); --sidebar-active-text: var(--wine);
+  --chat-user-bg: var(--wine); --chat-user-text: #f7f0e2; --chat-other-bg: var(--card2); --chat-other-text: var(--ink);
+}
 }
 
 .dark {
@@ -39,6 +62,11 @@
   --pine: #5a9a8c;
   --gold: #c9a96a;
   --glow: rgba(201, 169, 106, 0.07);
+  --success: #5cb98c;
+  --warning: #d9a441;
+  --error: #e07070;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -18px rgba(0,0,0,.6);
+  --shadow-deep: 0 2px 6px rgba(0,0,0,.5), 0 28px 60px -24px rgba(0,0,0,.8);
   --hl-yellow: rgba(224, 186, 84, 0.28);
   --hl-blue: rgba(120, 168, 220, 0.3);
   --hl-green: rgba(110, 190, 145, 0.28);
@@ -51,7 +79,16 @@ html { scroll-behavior: smooth; }
 
 body {
   @apply bg-bg text-ink font-sans antialiased;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height);
+  letter-spacing: var(--letter-spacing);
   transition: background-color 0.45s ease, color 0.45s ease;
+}
+
+/* animações controláveis: o Theme Engine liga/desliga via [data-anim] */
+[data-anim='off'] *, [data-anim='off'] *::before, [data-anim='off'] *::after {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
 }
 
 /* Luz ambiente de biblioteca à noite */
@@ -84,12 +121,17 @@ body {
 
 /* ─── Componentes utilitários ─── */
 .card {
-  @apply rounded-2xl border border-line bg-card shadow-card;
+  background: var(--card);
+  border: var(--border-width) solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
 }
 
 .glass {
-  @apply border border-line backdrop-blur-md;
-  background: color-mix(in srgb, var(--card) 72%, transparent);
+  border: var(--border-width) solid var(--line);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background: color-mix(in srgb, var(--card) calc(var(--glass-alpha) * 100%), transparent);
 }
 
 .hairline { height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent); }

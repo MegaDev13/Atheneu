@@ -218,6 +218,29 @@ async function main() {
   ok('segurança: RLS habilitado nas tabelas', (mig.match(/enable row level security/g) || []).length >= 30);
   ok('segurança: nenhuma service role no frontend', !backendSrc.includes('service_role') && !fs.readFileSync('src/lib/supabase.ts', 'utf8').includes('service_role'));
 
+  // ═══ Theme Engine (§24/25) ═══
+  const schema = await import('../src/theme/schema');
+  const presets = await import('../src/theme/presets');
+  const ai = await import('../src/theme/ai');
+  ok('tema: 12 presets no mesmo engine', presets.PRESETS.length === 12);
+  const evil = schema.sanitizeTheme({ name: 'x', mode: 'dark', colors: { background: 'javascript:alert(1)', primary: '#00e5ff', text: 'url(javascript:x)' }, radius: { xl: '20px' } });
+  ok('tema: bloqueia javascript:/url() e mantém tokens seguros', evil.colors.background === undefined && evil.colors.text === undefined && evil.colors.primary === '#00e5ff' && evil.radius.xl === '20px');
+  ok('tema: flatten gera pares var→valor', schema.flattenTheme(evil).some(([k, v]) => k === '--wine' && v === '#00e5ff'));
+  const base = presets.PRESET_LIGHT;
+  const merged = ai.mergePatch(base, { colors: { primary: '#00e5ff' } });
+  ok('tema: merge incremental preserva o resto', merged.colors.primary === '#00e5ff' && merged.mode === 'light');
+  const local = ai.localDesigner('faça um tema cyberpunk escuro com azul neon', base);
+  ok('tema: designer local interpreta pedido', local.mode === 'dark');
+  const darker = ai.localDesigner('deixe mais escuro', local);
+  ok('tema: modificação incremental não regenera tudo', darker.mode === 'dark');
+  const exportedJson = await import('../src/theme/engine').then(m => m.exportTheme(local));
+  const impTheme = await import('../src/theme/engine').then(m => m.importTheme(exportedJson));
+  ok('tema: export→import round-trip', impTheme.ok === true);
+  const badTheme = await import('../src/theme/engine').then(m => m.importTheme('{ "colors": { "background": "eval(1)" } }'));
+  ok('tema: import rejeita tema sem tokens válidos', (badTheme as any).ok === false);
+  const cr = schema.contrastRatio('#241e15', '#f2ecdf');
+  ok('tema: contraste do tema padrão >= 7 (acessível)', (cr || 0) >= 7);
+
   console.log(failures === 0 ? '\n🎉 Todos os testes passaram.' : `\n❌ ${failures} teste(s) falharam.`);
   process.exit(failures === 0 ? 0 : 1);
 }

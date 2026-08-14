@@ -21,6 +21,7 @@ const Devices = lazy(() => import('./pages/Devices'));
 const Knowledge = lazy(() => import('./pages/Knowledge'));
 const Clube = lazy(() => import('./pages/Clube'));
 const Profile = lazy(() => import('./pages/Profile'));
+const Appearance = lazy(() => import('./pages/Appearance'));
 
 function FullScreenLoader() {
   return (
@@ -103,6 +104,7 @@ export default function App() {
                       <Route path="jornada" element={<Journey />} />
                       <Route path="jornada/metas" element={<Goals />} />
                       <Route path="perfil" element={<Profile />} />
+                      <Route path="aparencia" element={<Appearance />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
