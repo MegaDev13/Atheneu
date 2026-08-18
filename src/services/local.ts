@@ -15,6 +15,7 @@ import {
 } from '../lib/demoStore';
 import { uid } from '../lib/utils';
 import { putFile, getFile } from '../lib/fileVault';
+import { publicAudioFor } from '../lib/shayLibrary';
 import type {
   Activity, AiCacheEntry, AiOperation, AiRequestEntry, AudioProgress, AudioSegmentMeta,
   Book, BookAudioState, Chapter, Goal, Highlight, Note, Notification, Profile, Progress,
@@ -26,7 +27,12 @@ export const localBackend: Backend = {
 
   async init() {
     const db = loadDB();
-    const userId = getSessionUserId();
+    let userId = getSessionUserId();
+    // Conta Shay pré-carregada no modo demo: entra direto na biblioteca.
+    if (!userId && db.profile) {
+      userId = db.profile.id;
+      setSessionUserId(userId);
+    }
     if (userId && db.profile) return { user: { id: db.profile.id, email: db.profile.email, name: db.profile.name } };
     return { user: null };
   },
@@ -137,6 +143,14 @@ export const localBackend: Backend = {
   async getBookFileUrl(_userId, book) {
     if (!book.fileKey) return null;
     if (book.fileKey.startsWith('data:')) return book.fileKey; // legado
+    if (book.fileKey.startsWith('public:')) {
+      const base = (import.meta.env.BASE_URL as string | undefined) || './';
+      const b = base.endsWith('/') ? base : base + '/';
+      return b + book.fileKey.slice('public:'.length);
+    }
+    if (book.fileKey.startsWith('http') || book.fileKey.startsWith('/') || book.fileKey.startsWith('./')) {
+      return book.fileKey;
+    }
     if (book.fileKey.startsWith('idb:')) {
       const blob = await getFile(book.fileKey.slice(4));
       return blob ? URL.createObjectURL(blob) : null;
@@ -353,7 +367,29 @@ export const localBackend: Backend = {
     const chapters = job
       ? db.jobChapters.filter((c) => c.jobId === job.id).sort((a, b) => a.chapterIdx - b.chapterIdx).map(mapJobChapter)
       : [];
-    const total = db.chapters.filter((c) => c.bookId === bookId).length;
+    const bookChs = db.chapters.filter((c) => c.bookId === bookId);
+    const total = bookChs.length;
+    if (chapters.length === 0 && total > 0) {
+      const ready = bookChs.map((c) => {
+        const url = publicAudioFor(bookId, c.index);
+        return url ? {
+        jobId: 'public-narration', chapterIdx: c.index, status: 'done' as const, storageKey: url,
+        format: 'mp3', seconds: 70, fileSize: 0, fileHash: null, segmentsDone: 1, segmentsTotal: 1,
+      } : null;
+      }).filter(Boolean) as any[];
+      if (ready.length) {
+        return {
+          job: {
+            id: 'public-narration', bookId, status: ready.length === total ? 'completed' : 'processing',
+            priority: 1, workerId: 'w-gemini', currentChapter: ready.length, currentSegment: 0,
+            progress: total ? ready.length / total : 1, engine: 'gemini', voice: 'Kore', speed: 1,
+            attempts: 0, createdAt: Date.now() - 3600000, startedAt: Date.now() - 3600000,
+            completedAt: ready.length === total ? Date.now() : null, errorMessage: null,
+          },
+          chapters: ready, readyChapters: ready.length, totalChapters: total,
+        } as BookAudioState;
+      }
+    }
     return {
       job: job ? mapJob(job) : null,
       chapters,
@@ -362,9 +398,10 @@ export const localBackend: Backend = {
     } as BookAudioState;
   },
 
-  async getAudioUrl() {
-    // Demo: não há arquivo real — o player usa a síntese do navegador como prévia.
-    return null;
+  async getAudioUrl(_userId, bookId, chapterIdx) {
+    const blob = await getFile(`audio:${bookId}:${chapterIdx}`);
+    if (blob) return URL.createObjectURL(blob);
+    return publicAudioFor(bookId, chapterIdx);
   },
 
   async getAudioSegments(_userId, bookId, chapterIdx) {

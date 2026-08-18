@@ -10,3 +10,7 @@ workers/windows/dist/
 .npm/
 .venv-tts/
 uploads/
+.tmp/
+scripts/__pycache__/
+pesquisa/__pycache__/
+**/*.pyc

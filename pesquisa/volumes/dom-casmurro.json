@@ -1,0 +1,26 @@
+{
+  "slug": "dom-casmurro",
+  "title": "Dom Casmurro",
+  "subtitle": "Machado de Assis",
+  "author": "Machado de Assis",
+  "genre": "Literatura",
+  "description": "Bento Santiago reconstrói a própria vida para responder se Capitu o traiu.",
+  "volume": 0,
+  "pages": 4,
+  "file": "library/dom-casmurro.pdf",
+  "cover": "covers/dom-casmurro.jpg",
+  "chapters": [
+    {
+      "title": "I · Do título",
+      "text": "I · Do título\n\nUma noite destas, vindo da cidade para o Engenho Novo, encontrei no trem da Central um rapaz que recitou versos. Como eu estava cansado, fechei os olhos. No dia seguinte alcunhou-me Dom Casmurro. Casmurro, no vulgo, é o homem calado e metido consigo. Dom veio por ironia."
+    },
+    {
+      "title": "II · Do livro",
+      "text": "II · Do livro\n\nVivo só, com um criado. Resolvi escrever as minhas memórias, em que contarei as coisas da minha mocidade, e principalmente uma criatura que amei acima de todas, e que me deu o ciúme mais amargo da vida. Não escrevo para divertir, mas para me defender. Entender é, às vezes, absolver."
+    },
+    {
+      "title": "III · O muro e os olhos de ressaca",
+      "text": "III · O muro e os olhos de ressaca\n\nAo canto do quintal havia um muro. Foi ali que Capitu, com aqueles olhos de ressaca — olhos de onda que se retém e puxa — me perguntou se eu teria ânimo de ser padre. Desde esse dia aprendi que a memória dos lugares guarda o que as palavras perdem."
+    }
+  ]
+}
