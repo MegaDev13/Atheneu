@@ -1,0 +1,26 @@
+{
+  "slug": "crime-e-castigo",
+  "title": "Crime e Castigo",
+  "subtitle": "Fiódor Dostoiévski",
+  "author": "Fiódor Dostoiévski",
+  "genre": "Literatura",
+  "description": "Raskólnikov concebe um ato terrível para provar uma ideia.",
+  "volume": 0,
+  "pages": 4,
+  "file": "library/crime-e-castigo.pdf",
+  "cover": "covers/crime-e-castigo.jpg",
+  "chapters": [
+    {
+      "title": "Primeira parte · I",
+      "text": "Primeira parte · I\n\nNo começo de julho, num calor extremo, ao entardecer, um jovem saiu do cubículo que alugava e caminhou devagar, como que hesitante, em direção à ponte. Evitou felizmente encontrar-se com a patroa na escada. Seu cubículo ficava sob o teto de um grande edifício de cinco andares e parecia mais um armário do que um quarto. Estava esmagado pela pobreza, mas o que o atormentava não era a miséria: era uma ideia que há meses lhe fermentava na cabeça. Não era um simples ensaio: era o primeiro passo."
+    },
+    {
+      "title": "Primeira parte · II",
+      "text": "Primeira parte · II\n\nO calor sufocante da cidade, a poeira, os andaimes e o cheiro das tavernas abalaram os nervos do jovem. Ao aproximar-se da casa da velha agiota, as pernas tremiam e a mão buscou o machado sob o casaco. Que é isso em mim?, pensou. Se tremo agora, que tremerei depois?"
+    },
+    {
+      "title": "Primeira parte · III",
+      "text": "Primeira parte · III\n\nDepois do que se passou, dias inteiros se confundiram num único torpor. O ato não o tornara maior, apenas menor. Recebeu um bilhete: mãe e irmã vinham a Petersburgo. Havia pessoas que ainda o amavam, e esse amor pareceu-lhe o tribunal mais severo de todos."
+    }
+  ]
+}

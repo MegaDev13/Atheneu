@@ -1,0 +1,22 @@
+{
+  "slug": "sobre-a-liberdade",
+  "title": "Sobre a Liberdade",
+  "subtitle": "John Stuart Mill",
+  "author": "John Stuart Mill",
+  "genre": "Política",
+  "description": "O clássico ensaio sobre os limites do poder da sociedade sobre o indivíduo.",
+  "volume": 0,
+  "pages": 3,
+  "file": "library/sobre-a-liberdade.pdf",
+  "cover": "covers/sobre-a-liberdade.jpg",
+  "chapters": [
+    {
+      "title": "Introdução",
+      "text": "Introdução\n\nO único fim pelo qual a humanidade está autorizada a interferir na liberdade de ação de um de seus membros é proteger a si mesma. Sobre si mesmo, sobre o seu corpo e o seu espírito, o indivíduo é soberano."
+    },
+    {
+      "title": "Da liberdade de pensamento e discussão",
+      "text": "Da liberdade de pensamento e discussão\n\nSe toda a humanidade menos um fosse de uma opinião, a humanidade não teria mais direito de silenciar esse indivíduo do que ele teria de silenciar a humanidade. A verdade ganha mais com o erro que a desafia do que com a repetição que a adormece."
+    }
+  ]
+}

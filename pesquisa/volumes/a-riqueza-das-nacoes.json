@@ -1,0 +1,22 @@
+{
+  "slug": "a-riqueza-das-nacoes",
+  "title": "A Riqueza das Nações",
+  "subtitle": "Adam Smith",
+  "author": "Adam Smith",
+  "genre": "Economia",
+  "description": "Divisão do trabalho, troca e a mão invisível.",
+  "volume": 0,
+  "pages": 3,
+  "file": "library/a-riqueza-das-nacoes.pdf",
+  "cover": "covers/riqueza-das-nacoes.jpg",
+  "chapters": [
+    {
+      "title": "Da divisão do trabalho",
+      "text": "Da divisão do trabalho\n\nO maior progresso no poder produtivo do trabalho parece ter sido efeito da divisão do trabalho. Uma pequena manufatura de alfinetes, com o ofício dividido, produzia dezenas de milhares por dia."
+    },
+    {
+      "title": "Do princípio que ocasiona a divisão do trabalho",
+      "text": "Do princípio que ocasiona a divisão do trabalho\n\nNão é da benevolência do açougueiro, do cervejeiro ou do padeiro que esperamos o nosso jantar, mas da consideração que eles têm pelo próprio interesse. Cada homem é levado por uma mão invisível a promover um fim que não fazia parte das suas intenções."
+    }
+  ]
+}

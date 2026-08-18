@@ -1,0 +1,26 @@
+{
+  "slug": "meditacoes",
+  "title": "Meditações",
+  "subtitle": "Marco Aurélio",
+  "author": "Marco Aurélio",
+  "genre": "Filosofia",
+  "description": "Anotações privadas do imperador: serenidade, dever e lucidez.",
+  "volume": 0,
+  "pages": 4,
+  "file": "library/meditacoes.pdf",
+  "cover": "covers/meditacoes.jpg",
+  "chapters": [
+    {
+      "title": "Livro II",
+      "text": "Livro II\n\nAo despertar, dize a ti mesmo: encontrarei hoje um indiscreto, um ingrato, um insolente. Tudo isso lhes advém por ignorância do bem e do mal. Nenhum deles pode me causar dano. Nascemos para cooperar. Realiza cada ação da vida como se fosse a última."
+    },
+    {
+      "title": "Livro IV",
+      "text": "Livro IV\n\nAs pessoas buscam retiros no campo e nas montanhas. Mas em parte alguma o homem encontra retiro mais sereno do que em sua própria alma. Se te afliges por algo exterior, não é a coisa que te perturba, mas o juízo que fazes dela. Sê semelhante ao rochedo contra o qual as ondas se quebram."
+    },
+    {
+      "title": "Livro VII",
+      "text": "Livro VII\n\nA vida é curta; o único fruto dela é a disposição piedosa e as ações em prol do bem comum. Espera a morte com o rosto alegre. Nada é mais precioso do que uma alma que se contenta com pouco e serve ao todo."
+    }
+  ]
+}

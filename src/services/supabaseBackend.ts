@@ -5,6 +5,8 @@
 import { supabase } from '../lib/supabase';
 import type { Backend } from './backend';
 import { uid } from '../lib/utils';
+import { catalogBooks, catalogChapters, publicFileUrl } from '../lib/catalogSync';
+import { publicAudioFor } from '../lib/shayLibrary';
 import type {
   Activity, AudioProgress, Book, Chapter, Goal, Highlight, Note, Notification,
   Profile, Progress, ReadingSession, SessionUser, SocialBundle,
@@ -42,7 +44,9 @@ const supabaseBackendImpl = {
     const { data } = await supabase!.auth.getSession();
     const s = data.session;
     if (!s) return { user: null };
-    return { user: { id: s.user.id, email: s.user.email || '', name: (s.user.user_metadata?.name as string) || '' } };
+    const user = { id: s.user.id, email: s.user.email || '', name: (s.user.user_metadata?.name as string) || '' };
+    syncCatalogToUser(user.id, user.email, user.name).catch((e) => console.warn('[catalog] sync:', e));
+    return { user };
   },
 
   async signUp(name, email, password) {
@@ -55,8 +59,11 @@ const supabaseBackendImpl = {
   },
 
   async signIn(email, password) {
-    const { error } = await supabase!.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase!.auth.signInWithPassword({ email, password });
     if (error) return { ok: false, message: error.message };
+    if (data.user) {
+      syncCatalogToUser(data.user.id, data.user.email || email, (data.user.user_metadata?.name as string) || '').catch(() => {});
+    }
     return { ok: true };
   },
 
@@ -382,15 +389,33 @@ Object.assign(supabaseBackendImpl, {
     }
     const { data: bch, error: e2 } = await supabase!.from('book_chapters').select('id').eq('book_id', bookId);
     req(bch, e2);
+    const total = (bch ?? []).length;
+    if (chapters.length === 0 && total > 0 && publicAudioFor(bookId, 0)) {
+      const ready = Array.from({ length: total }, (_, i) => ({
+        jobId: 'public-narration', chapterIdx: i, status: 'done' as const,
+        storageKey: publicAudioFor(bookId, i), format: 'mp3', seconds: 70,
+        fileSize: 0, fileHash: null, segmentsDone: 1, segmentsTotal: 1,
+      }));
+      return {
+        job: {
+          id: 'public-narration', bookId, status: 'completed', priority: 1, workerId: null,
+          currentChapter: total, currentSegment: 0, progress: 1, engine: 'gemini', voice: 'Kore',
+          speed: 1, attempts: 0, createdAt: Date.now(), startedAt: Date.now(), completedAt: Date.now(),
+          errorMessage: null,
+        },
+        chapters: ready, readyChapters: ready.length, totalChapters: total,
+      };
+    }
     return {
       job, chapters,
       readyChapters: chapters.filter((c) => c.status === 'done').length,
-      totalChapters: (bch ?? []).length,
+      totalChapters: total,
     };
   },
 
   async getAudioUrl(userId: string, bookId: string, chapterIdx: number) {
-    // §16: {user}/{book}/chapter-NNN.mp3 · URL assinada (arquivo privado)
+    const pub = publicAudioFor(bookId, chapterIdx);
+    if (pub) return pub;
     const key = `${userId}/${bookId}/chapter-${String(chapterIdx + 1).padStart(3, '0')}.mp3`;
     const { data, error } = await supabase!.storage.from('audio').createSignedUrl(key, 3600);
     if (error) return null;

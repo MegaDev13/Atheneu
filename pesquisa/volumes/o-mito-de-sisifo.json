@@ -1,0 +1,26 @@
+{
+  "slug": "o-mito-de-sisifo",
+  "title": "O Mito de Sísifo",
+  "subtitle": "Albert Camus",
+  "author": "Albert Camus",
+  "genre": "Filosofia",
+  "description": "Ensaio sobre o absurdo: é preciso imaginar Sísifo feliz.",
+  "volume": 0,
+  "pages": 4,
+  "file": "library/o-mito-de-sisifo.pdf",
+  "cover": "covers/mito-de-sisifo.jpg",
+  "chapters": [
+    {
+      "title": "Um raciocínio absurdo",
+      "text": "Um raciocínio absurdo\n\nSó existe um problema filosófico verdadeiramente sério: o suicídio. Julgar se a vida vale ou não a pena ser vivida é responder à questão fundamental da filosofia. O absurdo nasce do confronto entre o apelo humano e o silêncio irracional do mundo."
+    },
+    {
+      "title": "O homem absurdo",
+      "text": "O homem absurdo\n\nO que importa não é viver mais tempo: é viver mais. Recusar o consolo, recusar o salto, permanecer acordado diante do que não tem resposta."
+    },
+    {
+      "title": "Sísifo",
+      "text": "Sísifo\n\nOs deuses condenaram Sísifo a rolar uma pedra até o alto, de onde ela voltava a cair. A própria luta para chegar aos cumes é suficiente para encher um coração de homem. É preciso imaginar Sísifo feliz."
+    }
+  ]
+}

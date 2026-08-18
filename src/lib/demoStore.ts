@@ -5,6 +5,10 @@
 
 import { uid } from './utils';
 import { SEED_TEXTS } from './seedContent';
+import {
+  CLASSIC_COVERS, CLASSIC_PDF, SHAY_EMAIL, SHAY_ID, SHAY_NAME,
+  filosofiaAntigaBooks, shayInvestigationBooks, shayInvestigationChapters,
+} from './shayLibrary';
 import type {
   Activity,
   AudioProgress,
@@ -26,7 +30,7 @@ import type {
   SocialBundle,
 } from './types';
 
-const KEY = 'atheneu-db-v2';
+const KEY = 'atheneu-db-v5';
 const SESSION_KEY = 'atheneu-session-v1';
 
 export interface DemoDB {
@@ -105,14 +109,14 @@ function seedDB(): DemoDB {
     author,
     genre,
     description,
-    cover: null,
-    format: 'seed',
+    cover: CLASSIC_COVERS[`b-${id}`] || null,
+    format: CLASSIC_PDF[`b-${id}`] ? 'pdf' : 'seed',
     status,
     pages,
     rating,
     addedAt: now - addedDaysAgo * DAY,
     lastAccess: now - lastDaysAgo * DAY,
-    fileKey: null,
+    fileKey: CLASSIC_PDF[`b-${id}`] ? `public:${CLASSIC_PDF[`b-${id}`]}` : null,
     fileSize: 0,
   });
 
@@ -123,7 +127,11 @@ function seedDB(): DemoDB {
     mkBook('sisifo', 'O Mito de Sísifo', 'Albert Camus', 'Filosofia', 'want', 'Ensaio sobre o absurdo: a vida vale a pena ser vivida mesmo sem sentido dado de fora?', 144, 12, 12, 0),
     mkBook('liberdade', 'Sobre a Liberdade', 'John Stuart Mill', 'Política', 'finished', 'O clássico ensaio sobre os limites do poder da sociedade sobre o indivíduo.', 208, 120, 30, 5),
     mkBook('riqueza', 'A Riqueza das Nações', 'Adam Smith', 'Economia', 'finished', 'Divisão do trabalho, troca e a mão invisível: o fundamento da economia moderna.', 840, 90, 45, 4),
+    ...filosofiaAntigaBooks(now, DAY),
+    ...shayInvestigationBooks(now, DAY),
   ];
+  const inv0 = books.find((b) => b.id === 'b-inv-01');
+  if (inv0) { inv0.status = 'reading'; inv0.lastAccess = now; }
 
   const chapters: Chapter[] = [];
   for (const [key, data] of Object.entries(SEED_TEXTS)) {
@@ -131,6 +139,15 @@ function seedDB(): DemoDB {
       chapters.push({ id: `c-${key}-${i}`, bookId: `b-${key}`, index: i, title: c.title, text: c.text })
     );
   }
+  chapters.push(...shayInvestigationChapters());
+  chapters.push({
+    id: 'c-filo-1-0', bookId: 'b-filo-1', index: 0, title: 'Sobre esta compilação',
+    text: 'Esta é a compilação Filosofia Antiga I — Pré-Socráticos, Sócrates e Platão. O PDF completo está no leitor. Para ouvir o volume inteiro, extraia o texto no upload ou use Gerar audiobook com Gemini sobre os capítulos já indexados. Heráclito, Parmênides, os átomos de Demócrito, a Apologia e a República habitam estas páginas.',
+  });
+  chapters.push({
+    id: 'c-filo-2-0', bookId: 'b-filo-2', index: 0, title: 'Sobre esta compilação',
+    text: 'Filosofia Antiga II reúne Aristóteles, as escolas helenísticas e o pensamento romano. O PDF completo está no leitor. A Ética a Nicômaco, o Liceu, o estoicismo e o epicurismo atravessam este volume.',
+  });
 
   const progress: Progress[] = [
     { bookId: 'b-crime', chapter: 2, location: 0.42, page: 96, updatedAt: now - 3600000 },
@@ -185,6 +202,7 @@ function seedDB(): DemoDB {
     { id: uid(), kind: 'note', bookId: 'b-crime', text: 'criou uma nota em Crime e Castigo', at: now - DAY },
     { id: uid(), kind: 'added', bookId: 'b-sisifo', text: 'adicionou O Mito de Sísifo à biblioteca', at: now - 12 * DAY },
     { id: uid(), kind: 'finished', bookId: 'b-liberdade', text: 'concluiu Sobre a Liberdade', at: now - 30 * DAY },
+    { id: uid(), kind: 'added', bookId: 'b-inv-01', text: 'adicionou a série Investigação Crítica à biblioteca', at: now - 2 * DAY },
   ];
 
   const audio: AudioProgress[] = [
@@ -199,8 +217,15 @@ function seedDB(): DemoDB {
   ];
 
   return {
-    accounts: [],
-    profile: null,
+    accounts: [{ id: SHAY_ID, email: SHAY_EMAIL, name: SHAY_NAME, hash: 'demo-shay' }],
+    profile: {
+      id: SHAY_ID, name: SHAY_NAME, email: SHAY_EMAIL,
+      bio: 'Filosofia, história das ideias e economia política. Leio para confrontar fontes, não para confirmar bandeiras.',
+      color: '#6e1f2b', onboarded: true,
+      prefs: { interests: ['Filosofia', 'História', 'Economia', 'Política'], yearlyGoal: 24, frequency: 'daily', format: 'both', audioRate: 1 },
+      privacy: { library: 'public', progress: 'followers', activity: 'followers', notes: 'private', highlights: 'private' },
+      createdAt: now - 200 * DAY,
+    },
     books,
     chapters,
     progress,
@@ -224,10 +249,20 @@ function seedDB(): DemoDB {
         lastSeen: now - 26 * 3600000, createdAt: now - 60 * DAY,
       },
     ],
-    jobs: [],
-    jobChapters: [],
+    jobs: [
+      {
+        id: 'j-inv-01', bookId: 'b-inv-01', status: 'processing', priority: 1, workerId: 'w-gemini',
+        currentChapter: 1, currentSegment: 0, progress: 0.25,
+        engine: 'gemini', voice: 'Kore', speed: 1, attempts: 0,
+        createdAt: now - 3600000, startedAt: now - 3500000, completedAt: null, errorMessage: null,
+      },
+    ],
+    jobChapters: [
+      { jobId: 'j-inv-01', chapterIdx: 0, status: 'done', storageKey: 'public:audio/inv-01-cap01.mp3', format: 'mp3', seconds: 62, fileSize: 0, fileHash: null, segmentsDone: 1, segmentsTotal: 1 },
+      { jobId: 'j-inv-01', chapterIdx: 1, status: 'done', storageKey: 'public:audio/inv-01-cap02.mp3', format: 'mp3', seconds: 48, fileSize: 0, fileHash: null, segmentsDone: 1, segmentsTotal: 1 },
+    ],
     audioSegments: [],
-    ttsPrefs: { engine: 'kokoro', voice: 'pf_dora', speed: 1, language: 'pt-BR', quality: 'high' },
+    ttsPrefs: { engine: 'gemini', voice: 'Kore', speed: 1, language: 'pt-BR', quality: 'high' },
     aiCache: [],
     aiLog: [],
     annotations: [],

@@ -12,6 +12,9 @@ import { Button, Card, Skeleton } from '../components/ui';
 import BookCover from '../components/BookCover';
 import { fmtClock, relTime } from '../lib/utils';
 import type { Book, BookAudioState, Chapter, TtsPrefs, TtsWorker } from '../lib/types';
+import { geminiTtsAvailable, synthesizeChapterGemini, GEMINI_TTS_VOICES } from '../features/ai/geminiTts';
+import { putFile } from '../lib/fileVault';
+import { publicAudioPlaylist } from '../lib/shayLibrary';
 
 const RATES = [0.75, 1, 1.25, 1.5, 1.75, 2];
 const WPM = 160;
@@ -33,7 +36,8 @@ export default function Audiobooks() {
   const [audioState, setAudioState] = useState<BookAudioState | null>(null);
   const [allJobs, setAllJobs] = useState<import('../lib/types').TtsJob[]>([]);
   const [workers, setWorkers] = useState<TtsWorker[]>([]);
-  const [prefs, setPrefs] = useState<TtsPrefs>({ engine: 'kokoro', voice: '', speed: 1, language: 'pt-BR', quality: 'high' });
+  const [prefs, setPrefs] = useState<TtsPrefs>({ engine: 'gemini', voice: 'Kore', speed: 1, language: 'pt-BR', quality: 'high' });
+  const [genNote, setGenNote] = useState('');
   const [priority, setPriority] = useState<0 | 1 | 2>(1);
   const [generating, setGenerating] = useState(false);
 
@@ -46,6 +50,8 @@ export default function Audiobooks() {
   const [activeSegment, setActiveSegment] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const synthTimer = useRef<any>(null);
+  const playlistRef = useRef<string[]>([]);
+  const playlistIdx = useRef(0);
 
   useEffect(() => {
     if (!user) return;
@@ -91,14 +97,48 @@ export default function Audiobooks() {
     if (!user || !book) return;
     setGenerating(true);
     try {
+      if (prefs.engine === 'gemini') {
+        if (!geminiTtsAvailable()) {
+          toast('Configure a chave Gemini no Perfil para narrar com a API.', 'error');
+          return;
+        }
+        const chs = chapters.length ? chapters : await backend.getChapters(book.id);
+        if (chs.length === 0) {
+          toast('Este livro ainda não tem texto extraído para narrar.', 'error');
+          return;
+        }
+        await backend.createJob(user.id, book.id, priority, { ...prefs, engine: 'gemini' });
+        toast('Narrando com Gemini — capítulo a capítulo.', 'info');
+        for (let i = 0; i < chs.length; i++) {
+          const ch = chs[i];
+          if (!ch.text || ch.text.trim().length < 20) continue;
+          setGenNote(`Gemini · capítulo ${i + 1}/${chs.length}: ${ch.title}`);
+          const blob = await synthesizeChapterGemini(ch.text, {
+            voice: prefs.voice || 'Kore',
+            onChunk: (a, b) => setGenNote(`Gemini · cap. ${i + 1}/${chs.length} · bloco ${a}/${b}`),
+          });
+          await putFile(`audio:${book.id}:${ch.index}`, blob);
+          const seconds = Math.max(1, Math.round(ch.text.split(/\s+/).length / 2.4));
+          if (typeof (backend as any).markChapterAudio === 'function') {
+            await (backend as any).markChapterAudio(user.id, book.id, ch.index, seconds, `idb:audio:${book.id}:${ch.index}`);
+          }
+          await refreshState();
+        }
+        setGenNote('');
+        toast('Audiobook narrado com Gemini.', 'success');
+        await refreshState();
+        return;
+      }
       await backend.createJob(user.id, book.id, priority, prefs);
       const online = workers.filter((w) => w.status === 'online' && w.active).length;
       toast(online > 0 ? 'Trabalho enviado para a fila de processamento.' : 'Na fila. Nenhum worker online agora — o job aguarda um dispositivo.', 'info');
       await refreshState();
-    } catch {
-      toast('Não foi possível criar o trabalho de áudio.', 'error');
+    } catch (e: any) {
+      console.error(e);
+      toast(e?.message?.slice(0, 160) || 'Não foi possível criar o trabalho de áudio.', 'error');
     } finally {
       setGenerating(false);
+      setGenNote('');
     }
   }
 
@@ -115,18 +155,34 @@ export default function Audiobooks() {
     if (!chapter || !user || !book) return;
     stopAll();
     setPlaying(true);
-    if (chapterState?.status === 'done') {
-      const url = await backend.getAudioUrl(user.id, book.id, chapter.index);
-      if (url && audioRef.current) {
-        audioRef.current.src = url;
-        audioRef.current.playbackRate = rate;
-        audioRef.current.volume = volume;
-        audioRef.current.currentTime = Math.min(elapsed, chapterAudioSeconds - 1);
-        audioRef.current.play().catch(() => fallbackSpeech());
-        return;
-      }
+    const list = publicAudioPlaylist(book.id, chapter.index);
+    const stored = await backend.getAudioUrl(user.id, book.id, chapter.index);
+    const urls = list.length ? list : (stored ? [stored] : []);
+    if (urls.length && audioRef.current) {
+      playlistRef.current = urls;
+      playlistIdx.current = 0;
+      audioRef.current.src = urls[0];
+      audioRef.current.playbackRate = rate;
+      audioRef.current.volume = volume;
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => fallbackSpeech());
+      return;
     }
     fallbackSpeech();
+  }
+
+  function onAudioEnded() {
+    const nextPart = playlistIdx.current + 1;
+    if (nextPart < playlistRef.current.length && audioRef.current) {
+      playlistIdx.current = nextPart;
+      audioRef.current.src = playlistRef.current[nextPart];
+      audioRef.current.playbackRate = rate;
+      audioRef.current.volume = volume;
+      audioRef.current.play().catch(() => {});
+      return;
+    }
+    setPlaying(false);
+    if (chapterIdx < chapters.length - 1) { setChapterIdx(chapterIdx + 1); setElapsed(0); }
   }
 
   // Prévia local (voz do navegador) — usada quando ainda não há áudio gerado.
@@ -419,20 +475,37 @@ export default function Audiobooks() {
             <div className="space-y-3">
               <label className="block">
                 <span className="mb-1 block text-[12px] font-medium text-mute">Engine</span>
-                <select value={prefs.engine} onChange={async (e) => { const p = { ...prefs, engine: e.target.value }; setPrefs(p); await backend.saveTtsPrefs(user!.id, p); }}
+                <select value={prefs.engine} onChange={async (e) => {
+                  const engine = e.target.value;
+                  const p = { ...prefs, engine, voice: engine === 'gemini' ? (prefs.voice || 'Kore') : prefs.voice };
+                  setPrefs(p); await backend.saveTtsPrefs(user!.id, p);
+                }}
                   className="h-9 w-full rounded-lg border border-line bg-card2/50 px-2.5 text-[13px] text-ink focus:outline-none">
+                  <option value="gemini">Gemini (API — narração)</option>
                   <option value="kokoro">Kokoro (local)</option>
                   <option value="piper">Piper (local)</option>
                 </select>
               </label>
               <label className="block">
                 <span className="mb-1 block text-[12px] font-medium text-mute">Voz</span>
-                <input value={prefs.voice} placeholder="ex.: pf_dora"
-                  onChange={async (e) => { const p = { ...prefs, voice: e.target.value }; setPrefs(p); await backend.saveTtsPrefs(user!.id, p); }}
-                  className="h-9 w-full rounded-lg border border-line bg-card2/50 px-2.5 text-[13px] text-ink placeholder:text-faint focus:outline-none" />
+                {prefs.engine === 'gemini' ? (
+                  <select value={prefs.voice || 'Kore'} onChange={async (e) => { const p = { ...prefs, voice: e.target.value }; setPrefs(p); await backend.saveTtsPrefs(user!.id, p); }}
+                    className="h-9 w-full rounded-lg border border-line bg-card2/50 px-2.5 text-[13px] text-ink focus:outline-none">
+                    {GEMINI_TTS_VOICES.map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
+                  </select>
+                ) : (
+                  <input value={prefs.voice} placeholder="ex.: pf_dora"
+                    onChange={async (e) => { const p = { ...prefs, voice: e.target.value }; setPrefs(p); await backend.saveTtsPrefs(user!.id, p); }}
+                    className="h-9 w-full rounded-lg border border-line bg-card2/50 px-2.5 text-[13px] text-ink placeholder:text-faint focus:outline-none" />
+                )}
               </label>
+              {genNote && <p className="text-[12px] text-gold">{genNote}</p>}
               <p className="text-[11px] leading-relaxed text-faint">
-                TTS 100% local nos seus dispositivos (Workers) — sem custo por geração.
+                {prefs.engine === 'gemini'
+                  ? (geminiTtsAvailable()
+                    ? 'Narração com a API Gemini já configurada no seu perfil. Cada capítulo vira um arquivo de áudio.'
+                    : 'Salve a chave Gemini em Perfil → Uso da IA para narrar os PDFs.')
+                  : 'TTS 100% local nos seus dispositivos (Workers) — sem custo por geração.'}
               </p>
             </div>
           </Card>

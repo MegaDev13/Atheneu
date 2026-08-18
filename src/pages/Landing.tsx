@@ -122,13 +122,13 @@ export default function Landing() {
             >
               <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/10 blur-3xl" />
               <motion.div animate={reduced ? {} : { y: [0, -14, 0], rotate: [-4, -2.5, -4] }} transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }} className="absolute left-6 top-10 w-40">
-                <BookCover title="Meditações" author="Marco Aurélio" className="aspect-[2/3] shadow-deep" />
+                <BookCover title="Meditações" author="Marco Aurélio" cover="./covers/meditacoes.jpg" className="aspect-[2/3] shadow-deep" />
               </motion.div>
               <motion.div animate={reduced ? {} : { y: [0, -20, 0], rotate: [3, 5, 3] }} transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }} className="absolute right-8 top-24 w-44">
-                <BookCover title="Crime e Castigo" author="Fiódor Dostoiévski" className="aspect-[2/3] shadow-deep" />
+                <BookCover title="Crime e Castigo" author="Fiódor Dostoiévski" cover="./covers/crime-e-castigo.jpg" className="aspect-[2/3] shadow-deep" />
               </motion.div>
               <motion.div animate={reduced ? {} : { y: [0, -10, 0], rotate: [-1, 1.5, -1] }} transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 1.6 }} className="absolute bottom-2 left-1/2 w-36 -translate-x-1/2">
-                <BookCover title="O Mito de Sísifo" author="Albert Camus" className="aspect-[2/3] shadow-deep" />
+                <BookCover title="O Mito de Sísifo" author="Albert Camus" cover="./covers/mito-de-sisifo.jpg" className="aspect-[2/3] shadow-deep" />
               </motion.div>
               <div className="absolute bottom-10 left-1/2 h-px w-72 -translate-x-1/2 goldline" />
             </motion.div>
@@ -163,7 +163,7 @@ export default function Landing() {
               sub="Um pipeline dedicado converte seus livros em áudio capítulo a capítulo, e o player retoma de onde você parou — com velocidade ajustável."
             />
             <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-60px' }} className="card mx-auto flex max-w-2xl items-center gap-5 p-6">
-              <BookCover title="Meditações" author="Marco Aurélio" className="h-24 w-16 shrink-0" compact />
+              <BookCover title="Meditações" author="Marco Aurélio" cover="./covers/meditacoes.jpg" className="h-24 w-16 shrink-0" compact />
               <div className="min-w-0 flex-1">
                 <p className="font-display text-lg text-ink">Meditações</p>
                 <p className="text-[13px] text-mute">Livro IV · 12:48 restantes</p>

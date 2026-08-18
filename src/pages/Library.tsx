@@ -500,6 +500,10 @@ function BookDetail({
               <h3 className="font-display text-[20px] leading-snug text-ink">{book.title}</h3>
               <p className="text-[13.5px] text-mute">{book.author}</p>
               <p className="mt-1 text-[12px] text-faint">{book.genre} · ~{fmt(book.pages)} páginas</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {book.fileKey && <span className="rounded-full bg-wine-light px-2 py-0.5 text-[10.5px] font-semibold text-wine">PDF</span>}
+                <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10.5px] font-semibold text-gold">Audiobook</span>
+              </div>
               <div className="mt-3">
                 <div className="mb-1 flex justify-between text-[11.5px] text-faint"><span>{progress ? `pág. ${progress.page}` : 'não iniciado'}</span><span>{Math.round(pct * 100)}%</span></div>
                 <ProgressBar value={pct} />
