@@ -2,7 +2,7 @@ name: Deploy no GitHub Pages
 
 on:
   push:
-    branches: [main, arena/01a015be-atheneu]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
