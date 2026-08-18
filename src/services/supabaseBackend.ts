@@ -37,6 +37,36 @@ const mapProfile = (r: any): Profile => ({
   createdAt: new Date(r.created_at).getTime(),
 });
 
+function isShayAccount(email: string, name: string) {
+  return /shay|tmegasr/.test(`${email} ${name}`.toLowerCase());
+}
+
+/** Grava a estante oficial (PDFs + capítulos + capas) na conta Shay. Idempotente. */
+async function syncCatalogToUser(userId: string, email: string, name: string) {
+  if (!supabase || !isShayAccount(email, name)) return;
+  const books = catalogBooks();
+  const chapters = catalogChapters();
+  const bookRows = books.map((b) => ({
+    id: b.id, user_id: userId, title: b.title, author: b.author, genre: b.genre,
+    description: b.description, cover_url: b.cover, format: b.format, status: b.status,
+    pages: b.pages, rating: b.rating, added_at: new Date(b.addedAt).toISOString(),
+    last_access: new Date(b.lastAccess).toISOString(), file_key: b.fileKey, file_size: b.fileSize,
+  }));
+  const { error: eBooks } = await supabase.from('books').upsert(bookRows);
+  if (eBooks) throw eBooks;
+  const chRows = chapters.map((c) => ({
+    id: c.id, book_id: c.bookId, idx: c.index, title: c.title, content: c.text,
+  }));
+  for (let i = 0; i < chRows.length; i += 80) {
+    const { error } = await supabase.from('book_chapters').upsert(chRows.slice(i, i + 80));
+    if (error) throw error;
+  }
+  const { error: eProf } = await supabase.from('profiles').update({
+    username: 'shay', name: name || 'Shay', onboarded: true,
+  }).eq('id', userId);
+  if (eProf) console.warn('[catalog] username:', eProf.message);
+}
+
 const supabaseBackendImpl = {
   mode: 'supabase',
 
